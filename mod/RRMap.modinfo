@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ============================================================================
+     地大物博·真实地理（RRMap）—— M0 里程碑 Mod 身份证
+     Mod id 为唯一 GUID（uuidgen 生成），请勿与其他 Mod 重复。
+     语法依据：Civ6 modinfo 真实范例（YnAMP / Firaxis 官方教程 modinfo）
+     地图脚本注册：Civ6 没有 <Components><Maps> 语法，真实做法是
+       1) FrontEndActions/UpdateDatabase 向配置库 Maps 表插一行（Data/RR_Config.xml）
+       2) InGameActions/ImportFiles 导入地图脚本文件本体
+     ============================================================================ -->
+<Mod id="1F35D4DA-3F51-4613-89DC-572A3557E88F" version="1">
+
+	<Properties>
+		<Name>LOC_RR_MOD_NAME</Name>
+		<Teaser>LOC_RR_MOD_TEASER</Teaser>
+		<Description>LOC_RR_MOD_DESCRIPTION</Description>
+		<Authors>LOC_RR_MOD_AUTHORS</Authors>
+		<!-- 1.2 = 迭起兴衰(Rise & Fall)，2.0 = 风云变幻(Gathering Storm) -->
+		<CompatibleVersions>1.2,2.0</CompatibleVersions>
+		<!-- M0 为纯地图脚本，不动数据库Gameplay内容，不影响存档兼容性标记 -->
+		<AffectsSavedGames>0</AffectsSavedGames>
+		<SupportsSinglePlayer>1</SupportsSinglePlayer>
+		<SupportsMultiplayer>1</SupportsMultiplayer>
+		<SupportsHotSeat>1</SupportsHotSeat>
+	</Properties>
+
+	<!-- 前端加载：游戏主菜单 / 创建游戏界面出现前执行。
+	     地图脚本要在"创建游戏 → 地图类型"列表中出现，必须在配置库 Maps 表注册。 -->
+	<FrontEndActions>
+		<UpdateDatabase id="RR_CONFIG">
+			<File>Data/RR_Config.xml</File>
+		</UpdateDatabase>
+		<UpdateText id="RR_FRONTEND_TEXT">
+			<File>Text/RR_Text.xml</File>
+		</UpdateText>
+	</FrontEndActions>
+
+	<!-- 游戏内加载：开局生成地图时，游戏按 Maps 表里的 File 名查找脚本，
+	     ImportFiles 把脚本文件导入虚拟文件系统后才能被找到。 -->
+	<InGameActions>
+		<ImportFiles id="RR_MAP_SCRIPT">
+			<File>Maps/RR_Continents.lua</File>
+		</ImportFiles>
+		<UpdateText id="RR_INGAME_TEXT">
+			<File>Text/RR_Text.xml</File>
+		</UpdateText>
+	</InGameActions>
+
+	<!-- modinfo 自身引用文本（Properties 段使用）的多语言翻译 -->
+	<LocalizedText>
+		<Text id="LOC_RR_MOD_NAME">
+			<en_US>Real Geography (Dev)</en_US>
+			<zh_Hans_CN>地大物博·真实地理（开发中）</zh_Hans_CN>
+		</Text>
+		<Text id="LOC_RR_MOD_TEASER">
+			<en_US>Real-geography map framework. M0: vanilla generation pipeline, loadable and playable.</en_US>
+			<zh_Hans_CN>真实地理地图框架。M0：复用原版生成流程，可加载、可开局。</zh_Hans_CN>
+		</Text>
+		<Text id="LOC_RR_MOD_DESCRIPTION">
+			<en_US>Milestone M0 skeleton for the Real Geography mod. Registers a custom map script that mirrors the official Continents.lua pipeline (plot types, terrain, rivers, lakes, features, resources, starting plots) so a standard game can be started and the generation flow verified via Lua.log.</en_US>
+			<zh_Hans_CN>「地大物博·真实地理」Mod 的 M0 骨架里程碑。注册一个对照官方 Continents.lua 流程（地块类型、地形、河流、湖泊、地貌、资源、出生点）的自定义地图脚本，用于验证可开局与生成流程，后续里程碑将逐步接管真实地理分层。</zh_Hans_CN>
+		</Text>
+		<Text id="LOC_RR_MOD_AUTHORS">
+			<en_US>RRMap Project</en_US>
+			<zh_Hans_CN>RRMap 项目组</zh_Hans_CN>
+		</Text>
+	</LocalizedText>
+
+	<!-- 文件总清单：必须列出所有文件，否则对应文件不会被加载 -->
+	<Files>
+		<File>RRMap.modinfo</File>
+		<File>Data/RR_Config.xml</File>
+		<File>Maps/RR_Continents.lua</File>
+		<File>Text/RR_Text.xml</File>
+		<File>README.md</File>
+	</Files>
+
+</Mod>

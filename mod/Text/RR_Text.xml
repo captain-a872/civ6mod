@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ============================================================================
+     RRMap 本地化文本：地图类型名称与描述（中英双语）。
+     被 modinfo 的 FrontEndActions/UpdateText（配置库文本）与
+     InGameActions/UpdateText（游戏内文本）引用，同一文件两边加载。
+
+     标签命名遵循 LOC_ 前缀 + 唯一名（RR_ 前缀避免与其他 Mod 冲突）:
+       LOC_MAP_RR_CONTINENTS_NAME         地图类型显示名（"创建游戏 → 地图类型"列表）
+       LOC_MAP_RR_CONTINENTS_DESCRIPTION  地图类型描述
+     ============================================================================ -->
+<GameData>
+	<LocalizedText>
+
+		<!-- 地图类型名称 -->
+		<Row Tag="LOC_MAP_RR_CONTINENTS_NAME" Language="en_US">
+			<Text>Real Geography: Continents (Dev)</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_CONTINENTS_NAME" Language="zh_Hans_CN">
+			<Text>地大物博：大陆（开发中）</Text>
+		</Row>
+
+		<!-- 地图类型描述 -->
+		<Row Tag="LOC_MAP_RR_CONTINENTS_DESCRIPTION" Language="en_US">
+			<Text>M0 development map. Vanilla Continents generation pipeline (continents, terrain, rivers, lakes, features, resources, starting plots) wrapped in the Real Geography framework. Real-elevation and 1:4 grid work lands in later milestones.</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_CONTINENTS_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>M0 开发用地图。在"地大物博"框架内复用原版大陆生成流程（海陆、地形、河流、湖泊、地貌、资源、出生点），保证可加载可开局。真实海拔与 1:4 网格将在后续里程碑加入。</Text>
+		</Row>
+
+	</LocalizedText>
+</GameData>

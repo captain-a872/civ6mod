@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ============================================================================
+     RRMap 前端配置：向"配置数据库"（Configuration）的 Maps 表注册自定义地图脚本。
+
+     游戏"创建游戏 → 地图类型"下拉列表的数据来源就是 Maps 表。
+     本写法对照真实生产 Mod YnAMP 的 Maps/GiantEarth/Config.xml：
+       <Maps>
+           <Row File="GiantEarth.lua" Name="LOC_..." Description="LOC_..." SortIndex="1"/>
+       </Maps>
+     说明：
+       File      —— 脚本文件名（裸文件名，不含目录；须与 ImportFiles 导入的文件同名，
+                     且不能与游戏原文件或其他 Mod 重名，故用 RR_ 前缀）
+       Name      —— 地图类型显示名（LOC 标签，翻译见 Text/RR_Text.xml）
+       Description - 地图类型描述（LOC 标签）
+       SortIndex —— 在地图类型列表中的排序位置，取 40 避开原版脚本的序号
+     ============================================================================ -->
+<GameInfo>
+	<Maps>
+		<Row File="RR_Continents.lua" Name="LOC_MAP_RR_CONTINENTS_NAME" Description="LOC_MAP_RR_CONTINENTS_DESCRIPTION" SortIndex="40"/>
+	</Maps>
+</GameInfo>
