@@ -59,6 +59,13 @@ local RR_RIVER_WATER_ELEV = 300;	-- 河道格原海拔 <300m 才可转为水面�
 local RR_RIVER_WIDEN_ELEV = 50;		-- 拓宽候选邻格原海拔须 <50m（真低地，防淹丘陵）
 local RR_RIVER_WIDEN_DIST_R3 = 2;	-- R3：距河口 BFS 距离 ≤2 的河道格才触发拓宽
 local RR_RIVER_WIDEN_DIST_R4 = 4;	-- R4：≤4
+-- 理由（M2 首测数据修正）：并集近似会把多条河并成超大流域（首测单块 247 格），
+-- 若不限制，中上游全被转成水面（首测河道 1923 格=全图 10%）。加"距河口 BFS
+-- 距离"上限——只把下游一段转为水面，中上游保持边缘河（正是策划案
+-- "上游急流段/下游水面段"的表达）。
+local RR_RIVER_CHANNEL_DIST_R2 = 10;	-- R2：距河口 ≤10 格的河道转水面
+local RR_RIVER_CHANNEL_DIST_R3 = 16;	-- R3：≤16
+local RR_RIVER_CHANNEL_DIST_R4 = 24;	-- R4：≤24（亚马逊级干流的下游水面段）
 local RR_MARK_RAPIDS = 1;			-- g_RR_riverMark 位：急流/瀑布
 local RR_MARK_FLOODPLAIN = 2;		-- 位：河漫滩
 local RR_MARK_DELTA = 4;			-- 位：三角洲
@@ -1059,6 +1066,7 @@ function RR_PersistElevation()
 	local chunk = 4096;
 	local chunks = math.ceil(n / chunk);
 	local okCount = 0;
+	local failCount = 0;
 	local totalBytes = 0;
 	for c = 1, chunks do
 		local lo = (c - 1) * chunk + 1;
@@ -1075,9 +1083,13 @@ function RR_PersistElevation()
 			okCount = okCount + 1;
 			totalBytes = totalBytes + string.len(s);
 		else
-			-- 理由：写失败只报一次级别信息，继续尝试其余块（可能仅单块超限）。
-			print(string.format("[RRMap M1] WARNING: RR_Elevation_%d 写入失败（SetValue 可能不可用）", c - 1));
+			failCount = failCount + 1;
 		end
+	end
+	-- 理由（M2 首测实证）：SetValue 在建图上下文必失败（0/5 块），
+	-- 双保险之二=种子确定性重算；失败只汇总一行，不逐块刷屏。
+	if failCount > 0 then
+		print(string.format("[RRMap M1] WARNING: 海拔 SetValue 失败 %d/%d 块（建图上下文不支持，走种子重算）", failCount, chunks));
 	end
 	local okMeta = pcall(function()
 		MapConfiguration.SetValue("RR_Elevation_Count", tostring(okCount));
@@ -1264,48 +1276,16 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 		end
 	end
 
-	-- 第五遍：河漫滩/三角洲标记（施工前判定；宿主=低地/隆起且邻将成水的河道）
-	for i = 0, n - 1 do
-		if channel[i] then
-			local x = i % g_iW;
-			local y = (i - x) / g_iW;
-			for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
-				local a = Map.GetAdjacentPlot(x, y, dir);
-				if a ~= nil and not a:IsWater() then
-					local ai = a:GetY() * g_iW + a:GetX() + 1;
-					local f = g_RR_form[ai];
-					if (f == "低地" or f == "隆起") and g_RR_riverMark[ai] == nil then
-						if a:IsCoastalLand() then
-							g_RR_riverMark[ai] = RR_MARK_DELTA;
-							stats.delta = stats.delta + 1;
-						else
-							g_RR_riverMark[ai] = RR_MARK_FLOODPLAIN;
-							stats.floodplain = stats.floodplain + 1;
-						end
-					end
-				end
-			end
-		end
+	-- 水面段长度上限（按等级）
+	local function channelCap(cls)
+		if cls == 2 then return RR_RIVER_CHANNEL_DIST_R2;
+		elseif cls == 3 then return RR_RIVER_CHANNEL_DIST_R3;
+		elseif cls >= 4 then return RR_RIVER_CHANNEL_DIST_R4; end
+		return 0;
 	end
 
-	-- 第六遍：施工——河道格陆改水（AddLakes 机制：COAST + 台账同步）
-	for i = 0, n - 1 do
-		if channel[i] then
-			local p = Map.GetPlotByIndex(i);
-			if not p:IsWater() then
-				TerrainBuilder.SetTerrainType(p, g_TERRAIN_TYPE_COAST);
-				plotTypes[i] = g_PLOT_TYPE_OCEAN;
-				terrainTypes[i] = g_TERRAIN_TYPE_COAST;
-				g_RR_elevation[i + 1] = -5; -- ≈0m 水面
-				g_RR_form[i + 1] = "海岸/水面";
-				stats.channel = stats.channel + 1;
-			end
-		end
-	end
-
-	-- 第七遍：河口距离（多源 BFS，限河道格之间通行）+ R3/R4 入海口拓宽。
-	-- 理由（策划案大河卡"河口多格水面"）：只有下游近河口段拓宽，
-	-- 中上游保持 1 格宽航道——亚马逊河口 300km 宽由此表达。
+	-- 第五遍：河口距离（多源 BFS，限河道格之间通行）——先于一切施工，
+	-- 是水面段长度上限与漫滩标记的统一判定基础。
 	local mouthDist = {};
 	local queue = {};
 	local qh, qt = 1, 0;
@@ -1346,6 +1326,60 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 			end
 		end
 	end
+
+	-- 第六遍：河漫滩/三角洲标记（施工前判定；只标将转水面的下游河道两岸；
+	-- IsCoastalLand 此时还是施工前真值，三角洲判据才成立）
+	for i = 0, n - 1 do
+		if channel[i] and mouthDist[i] ~= nil and mouthDist[i] <= channelCap(g_RR_river[i + 1]) then
+			local x = i % g_iW;
+			local y = (i - x) / g_iW;
+			for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+				local a = Map.GetAdjacentPlot(x, y, dir);
+				if a ~= nil and not a:IsWater() then
+					local ai = a:GetY() * g_iW + a:GetX() + 1;
+					local f = g_RR_form[ai];
+					if (f == "低地" or f == "隆起") and g_RR_riverMark[ai] == nil then
+						if a:IsCoastalLand() then
+							g_RR_riverMark[ai] = RR_MARK_DELTA;
+							stats.delta = stats.delta + 1;
+						else
+							g_RR_riverMark[ai] = RR_MARK_FLOODPLAIN;
+							stats.floodplain = stats.floodplain + 1;
+						end
+					end
+				end
+			end
+		end
+	end
+
+	-- 第七遍：施工——下游河道格陆改水（AddLakes 机制：SetTerrainType + 台账同步）。
+	-- 理由（惰性解析自定义地形）：TERRAIN_RR_RIVER 由本 mod 的 UpdateDatabase
+	-- 加载，但 include 时机不保证晚于它，调用点查询最稳；失败回退 COAST——
+	-- 水面功能不受影响，仅描述退回"海岸"。
+	local riverTerrainType = g_TERRAIN_TYPE_COAST;
+	local okRT, rtIdx = pcall(function()
+		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
+	end);
+	if okRT and rtIdx ~= nil and rtIdx >= 0 then
+		riverTerrainType = rtIdx;
+	end
+	for i = 0, n - 1 do
+		if channel[i] and mouthDist[i] ~= nil and mouthDist[i] <= channelCap(g_RR_river[i + 1]) then
+			local p = Map.GetPlotByIndex(i);
+			if not p:IsWater() then
+				TerrainBuilder.SetTerrainType(p, riverTerrainType);
+				plotTypes[i] = g_PLOT_TYPE_OCEAN;
+				terrainTypes[i] = riverTerrainType;
+				g_RR_elevation[i + 1] = -5; -- ≈0m 水面
+				g_RR_form[i + 1] = "海岸/水面";
+				stats.channel = stats.channel + 1;
+			end
+		end
+	end
+
+	-- 第八遍：R3/R4 入海口拓宽。
+	-- 理由（策划案大河卡"河口多格水面"）：只有下游近河口段拓宽，
+	-- 中上游保持 1 格宽航道——亚马逊河口 300km 宽由此表达。
 	for i = 0, n - 1 do
 		if channel[i] and mouthDist[i] ~= nil then
 			local cls = g_RR_river[i + 1];
@@ -1365,9 +1399,9 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 						local f = g_RR_form[ai];
 						if (f == "低地" or f == "隆起")
 							and (g_RR_elevation[ai] or 9999) < RR_RIVER_WIDEN_ELEV then
-							TerrainBuilder.SetTerrainType(a, g_TERRAIN_TYPE_COAST);
+							TerrainBuilder.SetTerrainType(a, riverTerrainType);
 							plotTypes[ai - 1] = g_PLOT_TYPE_OCEAN;
-							terrainTypes[ai - 1] = g_TERRAIN_TYPE_COAST;
+							terrainTypes[ai - 1] = riverTerrainType;
 							g_RR_elevation[ai] = -5;
 							g_RR_form[ai] = "海岸/水面";
 							stats.widened = stats.widened + 1;

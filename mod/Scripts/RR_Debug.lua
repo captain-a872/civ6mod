@@ -25,8 +25,9 @@ end
 
 local function OnRRTurnBegin(playerID)
 	-- 理由：TurnBegin 每个玩家每回合都触发，只在首个回合触发一次。
+	-- 窗口放宽到回合 2——防御个别开局流程首回合事件早于脚本就绪的边界。
 	-- 存档中途读取不重新触发（TurnBegin 只在回合推进时发）——调试够用。
-	if RR_DEBUG_REVEAL_ALL and not g_RR_RevealDone and Game.GetCurrentGameTurn() <= 1 then
+	if RR_DEBUG_REVEAL_ALL and not g_RR_RevealDone and Game.GetCurrentGameTurn() <= 2 then
 		RR_RevealAllPlots();
 		g_RR_RevealDone = true;
 	end

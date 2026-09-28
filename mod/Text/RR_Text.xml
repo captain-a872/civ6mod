@@ -41,5 +41,13 @@
 			<Text>地大物博真实地理比例尺。168×108 格（面积为"标准"的 4 倍）——M1 海拔与形态层里程碑的性能冒烟尺寸。</Text>
 		</Row>
 
+		<!-- M2 大河水面地形名（TERRAIN_RR_RIVER 的 Name 指向本键） -->
+		<Row Tag="LOC_TERRAIN_RR_RIVER_NAME" Language="en_US">
+			<Text>Great River</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RIVER_NAME" Language="zh_Hans_CN">
+			<Text>大河水面</Text>
+		</Row>
+
 	</LocalizedText>
 </GameData>

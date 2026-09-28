@@ -49,10 +49,16 @@
 		<UpdateText id="RR_INGAME_TEXT">
 			<File>Text/RR_Text.xml</File>
 		</UpdateText>
-		<!-- 调试工具（非发布内容）：开局全图探索，见 Scripts/RR_Debug.lua 头注释 -->
-		<UpdateScripts id="RR_DEBUG_SCRIPT">
+		<!-- 调试工具（非发布内容）：开局全图探索，见 Scripts/RR_Debug.lua 头注释。
+		     动作类型照官方 AlexanderScenario.modinfo L59 的 AddGameplayScripts
+		     （M2 首测教训：误写 UpdateScripts 不是合法游戏内动作，脚本被静默跳过） -->
+		<AddGameplayScripts id="RR_DEBUG_SCRIPT">
 			<File>Scripts/RR_Debug.lua</File>
-		</UpdateScripts>
+		</AddGameplayScripts>
+		<!-- TERRAIN_RR_RIVER（大河水面）注册：独立动作，失败不影响网格尺寸注册 -->
+		<UpdateDatabase id="RR_TERRAIN_DATA">
+			<File>Data/RR_Terrain.xml</File>
+		</UpdateDatabase>
 	</InGameActions>
 
 	<!-- modinfo 自身引用文本（Properties 段使用）的多语言翻译 -->
@@ -82,6 +88,7 @@
 		<File>Data/RR_MapsGameplay.xml</File>
 		<File>Maps/RR_Continents.lua</File>
 		<File>Scripts/RR_Debug.lua</File>
+		<File>Data/RR_Terrain.xml</File>
 		<File>Text/RR_Text.xml</File>
 		<File>README.md</File>
 	</Files>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ============================================================================
+     TERRAIN_RR_RIVER（大河水面）——M2 河流分级的水面地形。
+     依据：Base/Assets/Gameplay/Data/Terrains.xml L51 TERRAIN_COAST 行逐列对照
+     （Water/ShallowWater/MovementCost/InfluenceCost/AntiquityPriority/Appeal
+     全部同值），视觉沿用浅水渲染；名称独立，解决"大河水面描述显示为海"的
+     验收问题（M2 首测用户反馈）。
+     注意：Water="true" 使海军可通行（单位移动域按 Water 属性判定）；
+     刻意不复用 TERRAIN_COAST，否则沿海 modifier（港口/灯塔等）会错误地
+     把大河当作海岸（Those reference TERRAIN_COAST explicitly）。
+     ============================================================================ -->
+<GameData>
+	<Types>
+		<Row Type="TERRAIN_RR_RIVER" Kind="KIND_TERRAIN"/>
+	</Types>
+	<Terrains>
+		<Row TerrainType="TERRAIN_RR_RIVER" Name="LOC_TERRAIN_RR_RIVER_NAME"
+			Water="true" ShallowWater="true" MovementCost="1" InfluenceCost="2"
+			AntiquityPriority="2" Appeal="1"/>
+	</Terrains>
+	<Terrain_YieldChanges>
+		<Row TerrainType="TERRAIN_RR_RIVER" YieldType="YIELD_FOOD" YieldChange="1"/>
+		<Row TerrainType="TERRAIN_RR_RIVER" YieldType="YIELD_GOLD" YieldChange="1"/>
+	</Terrain_YieldChanges>
+	<TerrainClass_Terrains>
+		<Row TerrainClassType="TERRAIN_CLASS_WATER" TerrainType="TERRAIN_RR_RIVER"/>
+	</TerrainClass_Terrains>
+</GameData>
