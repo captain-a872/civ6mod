@@ -40,25 +40,18 @@ ln -s "/Users/lyg/Documents/Kimi/Workspaces/文明6/civ6mod/mod" \
 2. 回到主菜单 → **创建游戏（Create Game）** → 地图类型（Map Type）下拉列表，应出现 **地大物博：大陆（开发中）/ Real Geography: Continents (Dev)**。
 3. 选中该地图类型，任意标准尺寸开一局（单人、标准规则或迭起兴衰/风云变幻规则均可），能进入游戏即 M0 验收通过。
 
-## 日志验收（Lua.log）
+## 日志验收
 
-> **Mac 实测修正（2026-09-28，M0 验证）**：Aspyr 移植版**没有 Lua.log**，地图脚本里的 `print()` 不落任何日志；日志实际路径为
-> `~/Library/Application Support/Sid Meier's Civilization VI/Firaxis Games/Sid Meier's Civilization VI/Logs/`
-> （Mods/Saves 在双层嵌套目录，Logs 在外层 Firaxis Games 下，三处路径各不相同）。
-> Mac 端验收替代方案：① `Modding.log` 查 "Map Script: RR_Continents.lua"（注册+选用）② `GameCore.log` 的 Pathfinder Allocation 行列数=网格实际尺寸（证明 GetMapInitData 生效）③ 游戏内直接观察。Windows 端仍可正常用 Lua.log。
-
-开启一局后 Windows 查看 `Lua.log`，应能看到如下生成日志（按出现顺序）：
-
-```
-[RR] Generating RR Continents Map (M0 vanilla pipeline)
-[RR] Generating Plot Types
-[RR] Adding Features
-[RR] Adding cliffs
-[RR] Creating start plot database
-[RR] Map generation done. Grid: 84x54
-```
-
-最后一行的格数随所选尺寸变化（决斗 44×26 … 巨大 106×66）。
+> **Mac 实测（2026-09-28，M0 排障后修订）**：
+> 1. Aspyr 移植版**没有 Lua.log**，脚本 `print()` 不落盘；日志实际路径为
+>    `~/Library/Application Support/Sid Meier's Civilization VI/Firaxis Games/Sid Meier's Civilization VI/Logs/`
+>    （Mods/Saves 在双层嵌套目录，Logs 在外层 Firaxis Games 下，三处各不相同）。
+> 2. M0 脚本已改为**游戏内置 Continents.lua 的逐字节精确副本**（仅头部注释不同），
+>    因此无 [RR] 自定义打印行；验收改用以下客观证据：
+>    - `Modding.log` 中出现 `Map Script: RR_Continents.lua`（注册并被选用）
+>    - `GameCore.log` 出现 `Pathfinder Allocation, rows <H>, columns <W>`（GameCore 已用本脚本生成的网格初始化寻路，即地图生成成功）
+>    - 游戏内正常进入回合
+> 3. Windows 端：`print` 正常写入 `Logs\Lua.log`，内容为原版 "Generating Continents Map" 等行。
 
 ### 日志位置
 
