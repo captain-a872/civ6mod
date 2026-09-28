@@ -1587,42 +1587,79 @@ end
 
 function RR_PlaceLayer3Features()
 	-- 理由（M2.5 Layer3 落地）：把已有数据标记转成真实特征卡——
-	-- 三角洲标→FEATURE_RR_DELTA；急流标→FEATURE_RR_RAPIDS。
+	-- 三角洲标→FEATURE_RR_DELTA；急流标→FEATURE_RR_RAPIDS；
+	-- 漫滩标→FEATURE_RR_FLOODPLAIN。外加两种"原版即策划案"的地貌
+	-- 直放原版特征（视觉零风险）：荒漠邻河→FEATURE_OASIS（绿洲），
+	-- 低地多水邻格→FEATURE_MARSH（沼泽/湿地，策划案排水不畅判据的
+	-- 最简实现：平地草原/平原且 ≥3 邻水）。
 	-- 放在 AddFeatures 前：先占位，原版生成器跳过已有特征的格子。
+	local deltaId, rapidsId, floodId, oasisId, marshId = -1, -1, -1, -1, -1;
+	local function lazyId(name)
+		local ok, v = pcall(function() return GetGameInfoIndex("Features", name); end);
+		if ok and v ~= nil and v >= 0 then return v; end
+		return -1;
+	end
+	deltaId = lazyId("FEATURE_RR_DELTA");
+	rapidsId = lazyId("FEATURE_RR_RAPIDS");
+	floodId = lazyId("FEATURE_RR_FLOODPLAIN");
+	oasisId = lazyId("FEATURE_OASIS");
+	marshId = lazyId("FEATURE_MARSH");
 	if g_RR_riverMark == nil then
 		print("[RRMap M2] WARNING: Layer3特征跳过——水文标记未生成");
 		return;
 	end
-	local deltaId = -1;
-	local rapidsId = -1;
-	local okD, d = pcall(function() return GetGameInfoIndex("Features", "FEATURE_RR_DELTA"); end);
-	if okD and d ~= nil and d >= 0 then deltaId = d; end
-	local okR, r = pcall(function() return GetGameInfoIndex("Features", "FEATURE_RR_RAPIDS"); end);
-	if okR and r ~= nil and r >= 0 then rapidsId = r; end
-	local placedDelta, placedRapids, skipped = 0, 0, 0;
+	local placedDelta, placedRapids, placedFlood, placedOasis, placedMarsh, skipped =
+		0, 0, 0, 0, 0, 0;
+	-- 内嵌放置器：宿主不适（水/山/奇观/已有特征）计数跳过
+	local function tryPlace(pPlot, id)
+		if id < 0 then return false; end
+		if (not pPlot:IsWater()) and (not pPlot:IsMountain())
+			and (not pPlot:IsNaturalWonder())
+			and pPlot:GetFeatureType() == g_FEATURE_NONE then
+			TerrainBuilder.SetFeatureType(pPlot, id);
+			return true;
+		end
+		skipped = skipped + 1;
+		return false;
+	end
 	for y = 0, g_iH - 1 do
 		for x = 0, g_iW - 1 do
 			local i = y * g_iW + x + 1;
+			local pPlot = Map.GetPlot(x, y);
+			-- 第一层：水文标记卡（每格最多一个标记，赋值处已保证）
 			local m = g_RR_riverMark[i];
-			if m ~= nil then
-				local want = -1;
-				if m == RR_MARK_DELTA then want = deltaId;
-				elseif m == RR_MARK_RAPIDS then want = rapidsId; end
-				if want >= 0 then
-					local pPlot = Map.GetPlot(x, y);
-					if (not pPlot:IsWater()) and (not pPlot:IsMountain())
-						and (not pPlot:IsNaturalWonder())
-						and pPlot:GetFeatureType() == g_FEATURE_NONE then
-						TerrainBuilder.SetFeatureType(pPlot, want);
-						if m == RR_MARK_DELTA then placedDelta = placedDelta + 1;
-						else placedRapids = placedRapids + 1; end
+			if m == RR_MARK_DELTA and tryPlace(pPlot, deltaId) then placedDelta = placedDelta + 1;
+			elseif m == RR_MARK_RAPIDS and tryPlace(pPlot, rapidsId) then placedRapids = placedRapids + 1;
+			elseif m == RR_MARK_FLOODPLAIN and tryPlace(pPlot, floodId) then placedFlood = placedFlood + 1; end
+			-- 第二层：原版特征直放（只在没有水文卡时）
+			if pPlot:GetFeatureType() == g_FEATURE_NONE then
+				local t = pPlot:GetTerrainType();
+				if t == g_TERRAIN_TYPE_DESERT then
+					-- 绿洲：平地荒漠 且 邻河（小河边缘河或大河水面都算水源）
+					if pPlot:IsRiver() then
+						if tryPlace(pPlot, oasisId) then placedOasis = placedOasis + 1; end
 					else
-						skipped = skipped + 1;
+						for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+							local a = Map.GetAdjacentPlot(x, y, dir);
+							if a ~= nil and a:IsWater() then
+								if tryPlace(pPlot, oasisId) then placedOasis = placedOasis + 1; end
+								break;
+							end
+						end
 					end
+				elseif (t == g_TERRAIN_TYPE_GRASS or t == g_TERRAIN_TYPE_PLAINS)
+					and (not pPlot:IsHills()) then
+					-- 沼泽：平地草原/平原 且 ≥3 邻水（排水不畅）
+					local waterN = 0;
+					for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+						local a = Map.GetAdjacentPlot(x, y, dir);
+						if a ~= nil and a:IsWater() then waterN = waterN + 1; end
+					end
+					if waterN >= 3 and tryPlace(pPlot, marshId) then placedMarsh = placedMarsh + 1; end
 				end
 			end
 		end
 	end
-	print(string.format("[RRMap M2] Layer3特征: 三角洲 %d, 急流 %d, 跳过(宿主不适) %d",
-		placedDelta, placedRapids, skipped));
+	print(string.format("[RRMap M2] Layer3特征: 三角洲 %d, 急流 %d, 漫滩 %d, 绿洲 %d, 沼泽 %d, 跳过(宿主不适) %d",
+		placedDelta, placedRapids, placedFlood, placedOasis, placedMarsh, skipped));
 end

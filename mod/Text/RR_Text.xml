@@ -62,6 +62,12 @@
 		<Row Tag="LOC_FEATURE_RR_RAPIDS_NAME" Language="zh_Hans_CN">
 			<Text>急流</Text>
 		</Row>
+		<Row Tag="LOC_FEATURE_RR_FLOODPLAIN_NAME" Language="en_US">
+			<Text>River Floodplain</Text>
+		</Row>
+		<Row Tag="LOC_FEATURE_RR_FLOODPLAIN_NAME" Language="zh_Hans_CN">
+			<Text>河漫滩</Text>
+		</Row>
 
 	</LocalizedText>
 </GameData>

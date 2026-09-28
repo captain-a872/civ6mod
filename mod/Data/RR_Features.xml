@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- ============================================================================
-     Layer3 微地貌特征卡（M2.5）：三角洲 / 急流——策划案 2.2 C类叠加卡。
+     Layer3 微地貌特征卡（M2.5）：三角洲 / 急流 / 河漫滩——策划案 2.2 C类叠加卡。
      壳来源（视觉先不急，就近替代，M2 二测用户决策）：
        FEATURE_RR_DELTA  借 FEATURE_MARSH（沼泽）壳——行结构照抄
          Base/Assets/Gameplay/Data/Features.xml L34；
@@ -20,12 +20,19 @@
 			Removable="true" DefenseModifier="-2" Appeal="1" AntiquityPriority="3"/>
 		<Row FeatureType="FEATURE_RR_RAPIDS" Name="LOC_FEATURE_RR_RAPIDS_NAME"
 			AntiquityPriority="1"/>
+		<Row FeatureType="FEATURE_RR_FLOODPLAIN" Name="LOC_FEATURE_RR_FLOODPLAIN_NAME"
+			Removable="false" AntiquityPriority="2"/>
 	</Features>
 	<Feature_ValidTerrains>
 		<Row FeatureType="FEATURE_RR_DELTA" TerrainType="TERRAIN_GRASS"/>
 		<Row FeatureType="FEATURE_RR_DELTA" TerrainType="TERRAIN_GRASS_HILLS"/>
 		<Row FeatureType="FEATURE_RR_DELTA" TerrainType="TERRAIN_PLAINS"/>
 		<Row FeatureType="FEATURE_RR_DELTA" TerrainType="TERRAIN_PLAINS_HILLS"/>
+		<Row FeatureType="FEATURE_RR_FLOODPLAIN" TerrainType="TERRAIN_GRASS"/>
+		<Row FeatureType="FEATURE_RR_FLOODPLAIN" TerrainType="TERRAIN_PLAINS"/>
+		<Row FeatureType="FEATURE_RR_FLOODPLAIN" TerrainType="TERRAIN_DESERT"/>
+		<Row FeatureType="FEATURE_RR_FLOODPLAIN" TerrainType="TERRAIN_DESERT_HILLS"/>
+		<Row FeatureType="FEATURE_RR_FLOODPLAIN" TerrainType="TERRAIN_TUNDRA"/>
 		<Row FeatureType="FEATURE_RR_RAPIDS" TerrainType="TERRAIN_GRASS"/>
 		<Row FeatureType="FEATURE_RR_RAPIDS" TerrainType="TERRAIN_GRASS_HILLS"/>
 		<Row FeatureType="FEATURE_RR_RAPIDS" TerrainType="TERRAIN_PLAINS"/>
@@ -36,5 +43,6 @@
 	<Feature_YieldChanges>
 		<Row FeatureType="FEATURE_RR_DELTA" YieldType="YIELD_FOOD" YieldChange="3"/>
 		<Row FeatureType="FEATURE_RR_DELTA" YieldType="YIELD_GOLD" YieldChange="1"/>
+		<Row FeatureType="FEATURE_RR_FLOODPLAIN" YieldType="YIELD_FOOD" YieldChange="3"/>
 	</Feature_YieldChanges>
 </GameData>
