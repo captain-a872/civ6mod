@@ -14,6 +14,7 @@
 	<Types>
 		<Row Type="FEATURE_RR_DELTA" Kind="KIND_FEATURE"/>
 		<Row Type="FEATURE_RR_RAPIDS" Kind="KIND_FEATURE"/>
+		<Row Type="FEATURE_RR_FLOODPLAIN" Kind="KIND_FEATURE"/>
 	</Types>
 	<Features>
 		<Row FeatureType="FEATURE_RR_DELTA" Name="LOC_FEATURE_RR_DELTA_NAME"
