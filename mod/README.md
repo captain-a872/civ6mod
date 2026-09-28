@@ -42,7 +42,12 @@ ln -s "/Users/lyg/Documents/Kimi/Workspaces/文明6/civ6mod/mod" \
 
 ## 日志验收（Lua.log）
 
-开启一局后查看 `Lua.log`，应能看到如下生成日志（按出现顺序）：
+> **Mac 实测修正（2026-09-28，M0 验证）**：Aspyr 移植版**没有 Lua.log**，地图脚本里的 `print()` 不落任何日志；日志实际路径为
+> `~/Library/Application Support/Sid Meier's Civilization VI/Firaxis Games/Sid Meier's Civilization VI/Logs/`
+> （Mods/Saves 在双层嵌套目录，Logs 在外层 Firaxis Games 下，三处路径各不相同）。
+> Mac 端验收替代方案：① `Modding.log` 查 "Map Script: RR_Continents.lua"（注册+选用）② `GameCore.log` 的 Pathfinder Allocation 行列数=网格实际尺寸（证明 GetMapInitData 生效）③ 游戏内直接观察。Windows 端仍可正常用 Lua.log。
+
+开启一局后 Windows 查看 `Lua.log`，应能看到如下生成日志（按出现顺序）：
 
 ```
 [RR] Generating RR Continents Map (M0 vanilla pipeline)
