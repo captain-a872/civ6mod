@@ -170,6 +170,12 @@ function GenerateMap()
 	RR_ClassifyAndConvertRivers(plotTypes, terrainTypes);
 	rrStageClock = RR_Probe("大河分级", rrStageClock);
 
+	-- RR M2.5 Layer3：把分级阶段的三角洲/急流标记转成真实特征卡。
+	-- 理由（插入点）：大河分级写标记 → 特征卡落地 → AddFeatures——
+	-- 先占位后原版生成器会跳过这些格子，保证标记不被官方特征覆盖。
+	RR_PlaceLayer3Features();
+	rrStageClock = RR_Probe("Layer3特征", rrStageClock);
+
 	AddFeatures();
 	TerrainBuilder.AnalyzeChokepoints();
 	
@@ -1210,7 +1216,7 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 	local n = g_iW * g_iH;
 	local stats = {comps = 0, inland = 0, r1 = 0, r2 = 0, r3 = 0, r4 = 0,
 		channel = 0, rapids = 0, widened = 0, floodplain = 0, delta = 0,
-		lakesRemoved = 0, lakesKept = 0};
+		lakesRemoved = 0, lakesKept = 0, stubsRemoved = 0};
 	g_RR_river = {};
 	g_RR_riverMark = {};
 
@@ -1332,6 +1338,14 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 
 	-- 第三遍：分级（策划案"河流·大河（水面+等级卡）"：R2+ 才构成水面；
 	-- 1-based index 对齐 g_RR_* 表）
+	local function clearRiverEdges(i)
+		-- 理由：清除夭折河流的河沿。签名无官方清除先例，pcall 兜底——
+		-- 参数少了（flow/id 为 nil）C 绑定通常容忍；失败也只是留点。
+		local p = Map.GetPlotByIndex(i);
+		pcall(function() TerrainBuilder.SetWOfRiver(p, false); end);
+		pcall(function() TerrainBuilder.SetNWOfRiver(p, false); end);
+		pcall(function() TerrainBuilder.SetNEOfRiver(p, false); end);
+	end
 	for r, c in pairs(comps) do
 		stats.comps = stats.comps + 1;
 		local cls = 1;
@@ -1346,12 +1360,21 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 		else
 			stats.inland = stats.inland + 1; -- 内流河：全段保持边缘属性
 		end
-		if cls == 1 then stats.r1 = stats.r1 + c.size;
-		elseif cls == 2 then stats.r2 = stats.r2 + c.size;
-		elseif cls == 3 then stats.r3 = stats.r3 + c.size;
-		else stats.r4 = stats.r4 + c.size; end
-		for k = 1, c.size do
-			g_RR_river[c.plots[k] + 1] = cls;
+		if cls == 1 and c.size == 1 and not c.mouth then
+			-- 理由（M2.5 退化河点清除）：单格且不出海的分支=只画出源头的
+			-- 夭折河流，呈现"格子端点水点却无河道"（M2 二测用户反馈的
+			-- 端点水点正是此类）；清除河沿，水系图面干净了再看真短缺。
+			clearRiverEdges(c.plots[1]);
+			stats.stubsRemoved = stats.stubsRemoved + 1;
+			g_RR_river[c.plots[1] + 1] = 0;
+		else
+			if cls == 1 then stats.r1 = stats.r1 + c.size;
+			elseif cls == 2 then stats.r2 = stats.r2 + c.size;
+			elseif cls == 3 then stats.r3 = stats.r3 + c.size;
+			else stats.r4 = stats.r4 + c.size; end
+			for k = 1, c.size do
+				g_RR_river[c.plots[k] + 1] = cls;
+			end
 		end
 	end
 
@@ -1517,8 +1540,8 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 		stats.comps, stats.inland, stats.r1, stats.r2, stats.r3, stats.r4));
 	print(string.format("[RRMap M2] 水面: 河道 %d 格, 拓宽 %d 格, 急流 %d, 漫滩 %d, 三角洲 %d",
 		stats.channel, stats.widened, stats.rapids, stats.floodplain, stats.delta));
-	print(string.format("[RRMap M2] 湖泊: 保留(邻河) %d 格, 回填(孤儿) %d 格",
-		stats.lakesKept, stats.lakesRemoved));
+	print(string.format("[RRMap M2] 湖泊: 保留(邻河) %d 格, 回填(孤儿) %d 格; 退化河点清除 %d 处",
+		stats.lakesKept, stats.lakesRemoved, stats.stubsRemoved));
 
 	RR_PersistRiverData();
 end
@@ -1560,4 +1583,46 @@ function RR_PersistRiverData()
 	local okC, chC = writeChunks("RR_River", table.concat(classParts));
 	local okM, chM = writeChunks("RR_RiverMark", table.concat(markParts));
 	print(string.format("[RRMap M2] 水文持久化: 等级 %d/%d 块, 标记 %d/%d 块", okC, chC, okM, chM));
+end
+
+function RR_PlaceLayer3Features()
+	-- 理由（M2.5 Layer3 落地）：把已有数据标记转成真实特征卡——
+	-- 三角洲标→FEATURE_RR_DELTA；急流标→FEATURE_RR_RAPIDS。
+	-- 放在 AddFeatures 前：先占位，原版生成器跳过已有特征的格子。
+	if g_RR_riverMark == nil then
+		print("[RRMap M2] WARNING: Layer3特征跳过——水文标记未生成");
+		return;
+	end
+	local deltaId = -1;
+	local rapidsId = -1;
+	local okD, d = pcall(function() return GetGameInfoIndex("Features", "FEATURE_RR_DELTA"); end);
+	if okD and d ~= nil and d >= 0 then deltaId = d; end
+	local okR, r = pcall(function() return GetGameInfoIndex("Features", "FEATURE_RR_RAPIDS"); end);
+	if okR and r ~= nil and r >= 0 then rapidsId = r; end
+	local placedDelta, placedRapids, skipped = 0, 0, 0;
+	for y = 0, g_iH - 1 do
+		for x = 0, g_iW - 1 do
+			local i = y * g_iW + x + 1;
+			local m = g_RR_riverMark[i];
+			if m ~= nil then
+				local want = -1;
+				if m == RR_MARK_DELTA then want = deltaId;
+				elseif m == RR_MARK_RAPIDS then want = rapidsId; end
+				if want >= 0 then
+					local pPlot = Map.GetPlot(x, y);
+					if (not pPlot:IsWater()) and (not pPlot:IsMountain())
+						and (not pPlot:IsNaturalWonder())
+						and pPlot:GetFeatureType() == g_FEATURE_NONE then
+						TerrainBuilder.SetFeatureType(pPlot, want);
+						if m == RR_MARK_DELTA then placedDelta = placedDelta + 1;
+						else placedRapids = placedRapids + 1; end
+					else
+						skipped = skipped + 1;
+					end
+				end
+			end
+		end
+	end
+	print(string.format("[RRMap M2] Layer3特征: 三角洲 %d, 急流 %d, 跳过(宿主不适) %d",
+		placedDelta, placedRapids, skipped));
 end

@@ -49,5 +49,19 @@
 			<Text>大河水面</Text>
 		</Row>
 
+		<!-- M2.5 Layer3 微地貌特征卡名 -->
+		<Row Tag="LOC_FEATURE_RR_DELTA_NAME" Language="en_US">
+			<Text>River Delta</Text>
+		</Row>
+		<Row Tag="LOC_FEATURE_RR_DELTA_NAME" Language="zh_Hans_CN">
+			<Text>三角洲</Text>
+		</Row>
+		<Row Tag="LOC_FEATURE_RR_RAPIDS_NAME" Language="en_US">
+			<Text>Rapids</Text>
+		</Row>
+		<Row Tag="LOC_FEATURE_RR_RAPIDS_NAME" Language="zh_Hans_CN">
+			<Text>急流</Text>
+		</Row>
+
 	</LocalizedText>
 </GameData>

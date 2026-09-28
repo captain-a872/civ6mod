@@ -59,6 +59,10 @@
 		<UpdateDatabase id="RR_TERRAIN_DATA">
 			<File>Data/RR_Terrain.xml</File>
 		</UpdateDatabase>
+		<!-- Layer3 微地貌特征卡（三角洲/急流）：独立动作，失败互不影响 -->
+		<UpdateDatabase id="RR_FEATURE_DATA">
+			<File>Data/RR_Features.xml</File>
+		</UpdateDatabase>
 	</InGameActions>
 
 	<!-- modinfo 自身引用文本（Properties 段使用）的多语言翻译 -->
@@ -89,6 +93,7 @@
 		<File>Maps/RR_Continents.lua</File>
 		<File>Scripts/RR_Debug.lua</File>
 		<File>Data/RR_Terrain.xml</File>
+		<File>Data/RR_Features.xml</File>
 		<File>Text/RR_Text.xml</File>
 		<File>README.md</File>
 	</Files>
