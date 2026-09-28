@@ -142,6 +142,7 @@ function GenerateMap()
 	-- 河流前定稿"（调研 A 报告 M1 节），山麓带改动才能被河流/特征/资源全程看到。
 	RR_BuildElevationAndForms();
 	RR_ApplyFoothills();
+	RR_ApplySnowRidge();
 	RR_PersistElevation();
 	RR_PrintElevationSamples();
 	rrStageClock = RR_Probe("海拔/形态层", rrStageClock);
@@ -1051,6 +1052,31 @@ function RR_ApplyFoothills()
 	print(string.format("[RRMap M1] 山麓带: 平地改丘陵 %d 格 (IsHills延迟生效 %d 格)", converted, delayed));
 end
 
+function RR_ApplySnowRidge()
+	-- 理由（M1.5 可见性补完，M2 二测用户点破"大片无法通行山脉无层次"）：
+	-- 主脊带（>3500m，形态层判定）换雪山地形变体 TERRAIN_SNOW_MOUNTAIN
+	-- （原版雪顶皮肤）——高海拔山系呈现雪线核心，与外围山地肉眼分层。
+	-- 只改地形变体不改地块类型（仍为不可通行山脉），对河流/特征/资源零扰动。
+	if g_RR_form == nil then
+		print("[RRMap M1] WARNING: 雪线主脊跳过——形态层未生成");
+		return;
+	end
+	local capped = 0;
+	for y = 0, g_iH - 1 do
+		for x = 0, g_iW - 1 do
+			local i = y * g_iW + x + 1;
+			if g_RR_form[i] == "主脊" then
+				local pPlot = Map.GetPlot(x, y);
+				if pPlot:IsMountain() and pPlot:GetTerrainType() ~= g_TERRAIN_TYPE_SNOW_MOUNTAIN then
+					TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_SNOW_MOUNTAIN);
+					capped = capped + 1;
+				end
+			end
+		end
+	end
+	print(string.format("[RRMap M1] 雪线主脊: 雪顶 %d 格", capped));
+end
+
 function RR_PersistElevation()
 	-- 理由（T2 双保险之一）：海拔表写入 MapConfiguration，键 RR_Elevation_N 分块
 	-- （每块 4096 格、约 20-30KB 字符串）+ RR_Elevation_Count 块数。
@@ -1183,9 +1209,79 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 
 	local n = g_iW * g_iH;
 	local stats = {comps = 0, inland = 0, r1 = 0, r2 = 0, r3 = 0, r4 = 0,
-		channel = 0, rapids = 0, widened = 0, floodplain = 0, delta = 0};
+		channel = 0, rapids = 0, widened = 0, floodplain = 0, delta = 0,
+		lakesRemoved = 0, lakesKept = 0};
 	g_RR_river = {};
 	g_RR_riverMark = {};
+
+	-- 第零遍：孤儿小湖回填（理由：AddLakes 随机撒湖与河网无关，出现"水点无河"
+	-- 的违和——M2 二测用户反馈；策划案轻量因果要求水系连通。与河相连的
+	-- 小湖保留（首测好评的景观）。判定：小湖=水格且所属 Area 格数 ≤8
+	-- （海湾/大河水面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
+	local riverTerrainType0 = g_TERRAIN_TYPE_COAST;
+	local okRT0, rtIdx0 = pcall(function()
+		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
+	end);
+	if okRT0 and rtIdx0 ~= nil and rtIdx0 >= 0 then
+		riverTerrainType0 = rtIdx0;
+	end
+	local nearRiver = {};
+	local q2 = {};
+	local h2, t2 = 1, 0;
+	for i = 0, n - 1 do
+		local p = Map.GetPlotByIndex(i);
+		if p:IsRiver() then
+			nearRiver[i] = 0;
+			t2 = t2 + 1;
+			q2[t2] = i;
+		end
+	end
+	while h2 <= t2 do
+		local cur = q2[h2];
+		h2 = h2 + 1;
+		if nearRiver[cur] < 2 then
+			local x = cur % g_iW;
+			local y = (cur - x) / g_iW;
+			for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+				local a = Map.GetAdjacentPlot(x, y, dir);
+				if a ~= nil then
+					local ai = a:GetY() * g_iW + a:GetX();
+					if nearRiver[ai] == nil then
+						nearRiver[ai] = nearRiver[cur] + 1;
+						t2 = t2 + 1;
+						q2[t2] = ai;
+					end
+				end
+			end
+		end
+	end
+	for i = 0, n - 1 do
+		local p = Map.GetPlotByIndex(i);
+		if p:IsWater() and p:GetTerrainType() ~= riverTerrainType0 then
+			local area = p:GetArea();
+			if area ~= nil and area:GetPlotCount() <= 8 then
+				if nearRiver[i] == nil then
+					-- 回填陆地：纬度带基础地形（仿 TerrainGenerator 带：雪/苔原/草原）
+					local y = math.floor(i / g_iW);
+					local lat = math.abs((g_iH / 2) - y) / (g_iH / 2);
+					local t = g_TERRAIN_TYPE_GRASS;
+					if lat >= 0.8 then
+						t = g_TERRAIN_TYPE_SNOW;
+					elseif lat >= 0.65 then
+						t = g_TERRAIN_TYPE_TUNDRA;
+					end
+					TerrainBuilder.SetTerrainType(p, t);
+					plotTypes[i] = g_PLOT_TYPE_LAND;
+					terrainTypes[i] = t;
+					g_RR_elevation[i + 1] = 20;
+					g_RR_form[i + 1] = "低地";
+					stats.lakesRemoved = stats.lakesRemoved + 1;
+				else
+					stats.lakesKept = stats.lakesKept + 1;
+				end
+			end
+		end
+	end
 
 	-- 第一遍：河网并查集（0-based plot index，与 plotTypes 对齐）
 	local parent = {};
@@ -1412,8 +1508,8 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 		end
 	end
 
-	-- 第八遍：陆改水后区域重算（AddLakes 同款；后续特征/资源/出生点读新区域）
-	if stats.channel + stats.widened > 0 then
+	-- 第八遍半：陆改水后区域重算（AddLakes 同款；回填湖与新增水面都要）
+	if stats.channel + stats.widened + stats.lakesRemoved > 0 then
 		AreaBuilder.Recalculate();
 	end
 
@@ -1421,6 +1517,8 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 		stats.comps, stats.inland, stats.r1, stats.r2, stats.r3, stats.r4));
 	print(string.format("[RRMap M2] 水面: 河道 %d 格, 拓宽 %d 格, 急流 %d, 漫滩 %d, 三角洲 %d",
 		stats.channel, stats.widened, stats.rapids, stats.floodplain, stats.delta));
+	print(string.format("[RRMap M2] 湖泊: 保留(邻河) %d 格, 回填(孤儿) %d 格",
+		stats.lakesKept, stats.lakesRemoved));
 
 	RR_PersistRiverData();
 end

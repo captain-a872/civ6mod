@@ -1,5 +1,5 @@
 --- /tmp/rrmap_m1/Continents_baseline.lua	2026-09-28 22:34:07
-+++ mod/Maps/RR_Continents.lua	2026-09-29 00:33:58
++++ mod/Maps/RR_Continents.lua	2026-09-29 01:28:34
 @@ -1,4 +1,16 @@
  ------------------------------------------------------------------------------
 +-- 文件:    RR_Continents.lua
@@ -17,7 +17,7 @@
  --	FILE:	 Continents.lua
  --	AUTHOR:  
  --	PURPOSE: Base game script - Produces widely varied continents.
-@@ -25,6 +37,51 @@
+@@ -25,6 +37,58 @@
  local world_age_normal = 3;
  local world_age_old = 2;
  
@@ -43,6 +43,13 @@
 +local RR_RIVER_WIDEN_ELEV = 50;		-- 拓宽候选邻格原海拔须 <50m（真低地，防淹丘陵）
 +local RR_RIVER_WIDEN_DIST_R3 = 2;	-- R3：距河口 BFS 距离 ≤2 的河道格才触发拓宽
 +local RR_RIVER_WIDEN_DIST_R4 = 4;	-- R4：≤4
++-- 理由（M2 首测数据修正）：并集近似会把多条河并成超大流域（首测单块 247 格），
++-- 若不限制，中上游全被转成水面（首测河道 1923 格=全图 10%）。加"距河口 BFS
++-- 距离"上限——只把下游一段转为水面，中上游保持边缘河（正是策划案
++-- "上游急流段/下游水面段"的表达）。
++local RR_RIVER_CHANNEL_DIST_R2 = 10;	-- R2：距河口 ≤10 格的河道转水面
++local RR_RIVER_CHANNEL_DIST_R3 = 16;	-- R3：≤16
++local RR_RIVER_CHANNEL_DIST_R4 = 24;	-- R4：≤24（亚马逊级干流的下游水面段）
 +local RR_MARK_RAPIDS = 1;			-- g_RR_riverMark 位：急流/瀑布
 +local RR_MARK_FLOODPLAIN = 2;		-- 位：河漫滩
 +local RR_MARK_DELTA = 4;			-- 位：三角洲
@@ -69,7 +76,7 @@
  -------------------------------------------------------------------------------
  function GenerateMap()
  	print("Generating Continents Map");
-@@ -33,6 +90,10 @@
+@@ -33,6 +97,10 @@
  	-- Set globals
  	g_iW, g_iH = Map.GetGridSize();
  	g_iFlags = TerrainBuilder.GetFractalFlags();
@@ -80,7 +87,7 @@
  	local temperature = MapConfiguration.GetValue("temperature"); -- Default setting is Temperate.
  	if temperature == 4 then
  		temperature  =  1 + TerrainBuilder.GetRandomNumber(3, "Random Temperature- Lua");
-@@ -51,6 +112,8 @@
+@@ -51,6 +119,8 @@
  	end
  
  	plotTypes = GeneratePlotTypes(world_age);
@@ -89,7 +96,7 @@
  	terrainTypes = GenerateTerrainTypes(plotTypes, g_iW, g_iH, g_iFlags, false, temperature);
  	ApplyBaseTerrain(plotTypes, terrainTypes, g_iW, g_iH);
  
-@@ -64,27 +127,66 @@
+@@ -64,27 +134,67 @@
  	AddTerrainFromContinents(plotTypes, terrainTypes, world_age, g_iW, g_iH, iContinentBoundaryPlots);
  
  	AreaBuilder.Recalculate();
@@ -101,6 +108,7 @@
 +	-- 河流前定稿"（调研 A 报告 M1 节），山麓带改动才能被河流/特征/资源全程看到。
 +	RR_BuildElevationAndForms();
 +	RR_ApplyFoothills();
++	RR_ApplySnowRidge();
 +	RR_PersistElevation();
 +	RR_PrintElevationSamples();
 +	rrStageClock = RR_Probe("海拔/形态层", rrStageClock);
@@ -135,12 +143,12 @@
  	print("Adding cliffs");
  	AddCliffs(plotTypes, terrainTypes);
 +	rrStageClock = RR_Probe("崖岸", rrStageClock);
-+
+ 
 +	-- 理由（T1）：基线 Continents.lua 没有独立火山阶段（GS 火山由特征生成器统一处理，
 +	-- 对照 BBS 版 L125 的 AddVolcanos 才知差异），此处打印说明性探针避免 tuner 日志
 +	-- 出现"阶段缺失=中止"的误读。
 +	rrStageClock = RR_Probe("火山(跳过:基线无独立火山阶段)", rrStageClock);
- 
++
 +	-- 理由（T4 兜底）：同 numLargeLakes，自定义尺寸行匹配失败时回落标准值 5。
 +	local rrNumNW = 5;
 +	if rrMapRow ~= nil and rrMapRow.NumNaturalWonders ~= nil and rrMapRow.NumNaturalWonders > 0 then
@@ -158,7 +166,7 @@
  	
  	resourcesConfig = MapConfiguration.GetValue("resources");
  	local startConfig = MapConfiguration.GetValue("start");-- Get the start config
-@@ -93,6 +195,7 @@
+@@ -93,6 +203,7 @@
  		START_CONFIG = startConfig,
  	};
  	local resGen = ResourceGenerator.Create(args);
@@ -166,7 +174,7 @@
  
  	print("Creating start plot database.");
  	
-@@ -106,8 +209,13 @@
+@@ -106,8 +217,13 @@
  		START_CONFIG = startConfig,
  	};
  	local start_plot_database = AssignStartingPlots.Create(args)
@@ -180,7 +188,7 @@
  end
  
  -------------------------------------------------------------------------------
-@@ -140,6 +248,9 @@
+@@ -140,6 +256,9 @@
  	else
  		water_percent = TerrainBuilder.GetRandomNumber(sea_level_high - sea_level_low, "Random Sea Level - Lua") + sea_level_low  + 1;
  	end
@@ -190,7 +198,7 @@
  
  	-- Set values for hills and mountains according to World Age chosen by user.
  	local adjustment = world_age;
-@@ -244,6 +355,10 @@
+@@ -244,6 +363,10 @@
  		-- print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
  		-- print(".");
  	end
@@ -201,7 +209,7 @@
  	
  	local args = {};
  	args.world_age = world_age;
-@@ -664,4 +779,653 @@
+@@ -664,4 +787,777 @@
  	end
  
  
@@ -472,6 +480,31 @@
 +	print(string.format("[RRMap M1] 山麓带: 平地改丘陵 %d 格 (IsHills延迟生效 %d 格)", converted, delayed));
 +end
 +
++function RR_ApplySnowRidge()
++	-- 理由（M1.5 可见性补完，M2 二测用户点破"大片无法通行山脉无层次"）：
++	-- 主脊带（>3500m，形态层判定）换雪山地形变体 TERRAIN_SNOW_MOUNTAIN
++	-- （原版雪顶皮肤）——高海拔山系呈现雪线核心，与外围山地肉眼分层。
++	-- 只改地形变体不改地块类型（仍为不可通行山脉），对河流/特征/资源零扰动。
++	if g_RR_form == nil then
++		print("[RRMap M1] WARNING: 雪线主脊跳过——形态层未生成");
++		return;
++	end
++	local capped = 0;
++	for y = 0, g_iH - 1 do
++		for x = 0, g_iW - 1 do
++			local i = y * g_iW + x + 1;
++			if g_RR_form[i] == "主脊" then
++				local pPlot = Map.GetPlot(x, y);
++				if pPlot:IsMountain() and pPlot:GetTerrainType() ~= g_TERRAIN_TYPE_SNOW_MOUNTAIN then
++					TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_SNOW_MOUNTAIN);
++					capped = capped + 1;
++				end
++			end
++		end
++	end
++	print(string.format("[RRMap M1] 雪线主脊: 雪顶 %d 格", capped));
++end
++
 +function RR_PersistElevation()
 +	-- 理由（T2 双保险之一）：海拔表写入 MapConfiguration，键 RR_Elevation_N 分块
 +	-- （每块 4096 格、约 20-30KB 字符串）+ RR_Elevation_Count 块数。
@@ -487,6 +520,7 @@
 +	local chunk = 4096;
 +	local chunks = math.ceil(n / chunk);
 +	local okCount = 0;
++	local failCount = 0;
 +	local totalBytes = 0;
 +	for c = 1, chunks do
 +		local lo = (c - 1) * chunk + 1;
@@ -503,9 +537,13 @@
 +			okCount = okCount + 1;
 +			totalBytes = totalBytes + string.len(s);
 +		else
-+			-- 理由：写失败只报一次级别信息，继续尝试其余块（可能仅单块超限）。
-+			print(string.format("[RRMap M1] WARNING: RR_Elevation_%d 写入失败（SetValue 可能不可用）", c - 1));
++			failCount = failCount + 1;
 +		end
++	end
++	-- 理由（M2 首测实证）：SetValue 在建图上下文必失败（0/5 块），
++	-- 双保险之二=种子确定性重算；失败只汇总一行，不逐块刷屏。
++	if failCount > 0 then
++		print(string.format("[RRMap M1] WARNING: 海拔 SetValue 失败 %d/%d 块（建图上下文不支持，走种子重算）", failCount, chunks));
 +	end
 +	local okMeta = pcall(function()
 +		MapConfiguration.SetValue("RR_Elevation_Count", tostring(okCount));
@@ -599,9 +637,79 @@
 +
 +	local n = g_iW * g_iH;
 +	local stats = {comps = 0, inland = 0, r1 = 0, r2 = 0, r3 = 0, r4 = 0,
-+		channel = 0, rapids = 0, widened = 0, floodplain = 0, delta = 0};
++		channel = 0, rapids = 0, widened = 0, floodplain = 0, delta = 0,
++		lakesRemoved = 0, lakesKept = 0};
 +	g_RR_river = {};
 +	g_RR_riverMark = {};
++
++	-- 第零遍：孤儿小湖回填（理由：AddLakes 随机撒湖与河网无关，出现"水点无河"
++	-- 的违和——M2 二测用户反馈；策划案轻量因果要求水系连通。与河相连的
++	-- 小湖保留（首测好评的景观）。判定：小湖=水格且所属 Area 格数 ≤8
++	-- （海湾/大河水面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
++	local riverTerrainType0 = g_TERRAIN_TYPE_COAST;
++	local okRT0, rtIdx0 = pcall(function()
++		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
++	end);
++	if okRT0 and rtIdx0 ~= nil and rtIdx0 >= 0 then
++		riverTerrainType0 = rtIdx0;
++	end
++	local nearRiver = {};
++	local q2 = {};
++	local h2, t2 = 1, 0;
++	for i = 0, n - 1 do
++		local p = Map.GetPlotByIndex(i);
++		if p:IsRiver() then
++			nearRiver[i] = 0;
++			t2 = t2 + 1;
++			q2[t2] = i;
++		end
++	end
++	while h2 <= t2 do
++		local cur = q2[h2];
++		h2 = h2 + 1;
++		if nearRiver[cur] < 2 then
++			local x = cur % g_iW;
++			local y = (cur - x) / g_iW;
++			for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
++				local a = Map.GetAdjacentPlot(x, y, dir);
++				if a ~= nil then
++					local ai = a:GetY() * g_iW + a:GetX();
++					if nearRiver[ai] == nil then
++						nearRiver[ai] = nearRiver[cur] + 1;
++						t2 = t2 + 1;
++						q2[t2] = ai;
++					end
++				end
++			end
++		end
++	end
++	for i = 0, n - 1 do
++		local p = Map.GetPlotByIndex(i);
++		if p:IsWater() and p:GetTerrainType() ~= riverTerrainType0 then
++			local area = p:GetArea();
++			if area ~= nil and area:GetPlotCount() <= 8 then
++				if nearRiver[i] == nil then
++					-- 回填陆地：纬度带基础地形（仿 TerrainGenerator 带：雪/苔原/草原）
++					local y = math.floor(i / g_iW);
++					local lat = math.abs((g_iH / 2) - y) / (g_iH / 2);
++					local t = g_TERRAIN_TYPE_GRASS;
++					if lat >= 0.8 then
++						t = g_TERRAIN_TYPE_SNOW;
++					elseif lat >= 0.65 then
++						t = g_TERRAIN_TYPE_TUNDRA;
++					end
++					TerrainBuilder.SetTerrainType(p, t);
++					plotTypes[i] = g_PLOT_TYPE_LAND;
++					terrainTypes[i] = t;
++					g_RR_elevation[i + 1] = 20;
++					g_RR_form[i + 1] = "低地";
++					stats.lakesRemoved = stats.lakesRemoved + 1;
++				else
++					stats.lakesKept = stats.lakesKept + 1;
++				end
++			end
++		end
++	end
 +
 +	-- 第一遍：河网并查集（0-based plot index，与 plotTypes 对齐）
 +	local parent = {};
@@ -692,48 +800,16 @@
 +		end
 +	end
 +
-+	-- 第五遍：河漫滩/三角洲标记（施工前判定；宿主=低地/隆起且邻将成水的河道）
-+	for i = 0, n - 1 do
-+		if channel[i] then
-+			local x = i % g_iW;
-+			local y = (i - x) / g_iW;
-+			for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
-+				local a = Map.GetAdjacentPlot(x, y, dir);
-+				if a ~= nil and not a:IsWater() then
-+					local ai = a:GetY() * g_iW + a:GetX() + 1;
-+					local f = g_RR_form[ai];
-+					if (f == "低地" or f == "隆起") and g_RR_riverMark[ai] == nil then
-+						if a:IsCoastalLand() then
-+							g_RR_riverMark[ai] = RR_MARK_DELTA;
-+							stats.delta = stats.delta + 1;
-+						else
-+							g_RR_riverMark[ai] = RR_MARK_FLOODPLAIN;
-+							stats.floodplain = stats.floodplain + 1;
-+						end
-+					end
-+				end
-+			end
-+		end
++	-- 水面段长度上限（按等级）
++	local function channelCap(cls)
++		if cls == 2 then return RR_RIVER_CHANNEL_DIST_R2;
++		elseif cls == 3 then return RR_RIVER_CHANNEL_DIST_R3;
++		elseif cls >= 4 then return RR_RIVER_CHANNEL_DIST_R4; end
++		return 0;
 +	end
 +
-+	-- 第六遍：施工——河道格陆改水（AddLakes 机制：COAST + 台账同步）
-+	for i = 0, n - 1 do
-+		if channel[i] then
-+			local p = Map.GetPlotByIndex(i);
-+			if not p:IsWater() then
-+				TerrainBuilder.SetTerrainType(p, g_TERRAIN_TYPE_COAST);
-+				plotTypes[i] = g_PLOT_TYPE_OCEAN;
-+				terrainTypes[i] = g_TERRAIN_TYPE_COAST;
-+				g_RR_elevation[i + 1] = -5; -- ≈0m 水面
-+				g_RR_form[i + 1] = "海岸/水面";
-+				stats.channel = stats.channel + 1;
-+			end
-+		end
-+	end
-+
-+	-- 第七遍：河口距离（多源 BFS，限河道格之间通行）+ R3/R4 入海口拓宽。
-+	-- 理由（策划案大河卡"河口多格水面"）：只有下游近河口段拓宽，
-+	-- 中上游保持 1 格宽航道——亚马逊河口 300km 宽由此表达。
++	-- 第五遍：河口距离（多源 BFS，限河道格之间通行）——先于一切施工，
++	-- 是水面段长度上限与漫滩标记的统一判定基础。
 +	local mouthDist = {};
 +	local queue = {};
 +	local qh, qt = 1, 0;
@@ -774,6 +850,60 @@
 +			end
 +		end
 +	end
++
++	-- 第六遍：河漫滩/三角洲标记（施工前判定；只标将转水面的下游河道两岸；
++	-- IsCoastalLand 此时还是施工前真值，三角洲判据才成立）
++	for i = 0, n - 1 do
++		if channel[i] and mouthDist[i] ~= nil and mouthDist[i] <= channelCap(g_RR_river[i + 1]) then
++			local x = i % g_iW;
++			local y = (i - x) / g_iW;
++			for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
++				local a = Map.GetAdjacentPlot(x, y, dir);
++				if a ~= nil and not a:IsWater() then
++					local ai = a:GetY() * g_iW + a:GetX() + 1;
++					local f = g_RR_form[ai];
++					if (f == "低地" or f == "隆起") and g_RR_riverMark[ai] == nil then
++						if a:IsCoastalLand() then
++							g_RR_riverMark[ai] = RR_MARK_DELTA;
++							stats.delta = stats.delta + 1;
++						else
++							g_RR_riverMark[ai] = RR_MARK_FLOODPLAIN;
++							stats.floodplain = stats.floodplain + 1;
++						end
++					end
++				end
++			end
++		end
++	end
++
++	-- 第七遍：施工——下游河道格陆改水（AddLakes 机制：SetTerrainType + 台账同步）。
++	-- 理由（惰性解析自定义地形）：TERRAIN_RR_RIVER 由本 mod 的 UpdateDatabase
++	-- 加载，但 include 时机不保证晚于它，调用点查询最稳；失败回退 COAST——
++	-- 水面功能不受影响，仅描述退回"海岸"。
++	local riverTerrainType = g_TERRAIN_TYPE_COAST;
++	local okRT, rtIdx = pcall(function()
++		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
++	end);
++	if okRT and rtIdx ~= nil and rtIdx >= 0 then
++		riverTerrainType = rtIdx;
++	end
++	for i = 0, n - 1 do
++		if channel[i] and mouthDist[i] ~= nil and mouthDist[i] <= channelCap(g_RR_river[i + 1]) then
++			local p = Map.GetPlotByIndex(i);
++			if not p:IsWater() then
++				TerrainBuilder.SetTerrainType(p, riverTerrainType);
++				plotTypes[i] = g_PLOT_TYPE_OCEAN;
++				terrainTypes[i] = riverTerrainType;
++				g_RR_elevation[i + 1] = -5; -- ≈0m 水面
++				g_RR_form[i + 1] = "海岸/水面";
++				stats.channel = stats.channel + 1;
++			end
++		end
++	end
++
++	-- 第八遍：R3/R4 入海口拓宽。
++	-- 理由（策划案大河卡"河口多格水面"）：只有下游近河口段拓宽，
++	-- 中上游保持 1 格宽航道——亚马逊河口 300km 宽由此表达。
 +	for i = 0, n - 1 do
 +		if channel[i] and mouthDist[i] ~= nil then
 +			local cls = g_RR_river[i + 1];
@@ -793,9 +923,9 @@
 +						local f = g_RR_form[ai];
 +						if (f == "低地" or f == "隆起")
 +							and (g_RR_elevation[ai] or 9999) < RR_RIVER_WIDEN_ELEV then
-+							TerrainBuilder.SetTerrainType(a, g_TERRAIN_TYPE_COAST);
++							TerrainBuilder.SetTerrainType(a, riverTerrainType);
 +							plotTypes[ai - 1] = g_PLOT_TYPE_OCEAN;
-+							terrainTypes[ai - 1] = g_TERRAIN_TYPE_COAST;
++							terrainTypes[ai - 1] = riverTerrainType;
 +							g_RR_elevation[ai] = -5;
 +							g_RR_form[ai] = "海岸/水面";
 +							stats.widened = stats.widened + 1;
@@ -806,8 +936,8 @@
 +		end
 +	end
 +
-+	-- 第八遍：陆改水后区域重算（AddLakes 同款；后续特征/资源/出生点读新区域）
-+	if stats.channel + stats.widened > 0 then
++	-- 第八遍半：陆改水后区域重算（AddLakes 同款；回填湖与新增水面都要）
++	if stats.channel + stats.widened + stats.lakesRemoved > 0 then
 +		AreaBuilder.Recalculate();
 +	end
 +
@@ -815,6 +945,8 @@
 +		stats.comps, stats.inland, stats.r1, stats.r2, stats.r3, stats.r4));
 +	print(string.format("[RRMap M2] 水面: 河道 %d 格, 拓宽 %d 格, 急流 %d, 漫滩 %d, 三角洲 %d",
 +		stats.channel, stats.widened, stats.rapids, stats.floodplain, stats.delta));
++	print(string.format("[RRMap M2] 湖泊: 保留(邻河) %d 格, 回填(孤儿) %d 格",
++		stats.lakesKept, stats.lakesRemoved));
 +
 +	RR_PersistRiverData();
 +end
