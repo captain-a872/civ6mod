@@ -796,10 +796,14 @@ end
 function RR_CountMountainNeighbors(x, y)
 	-- 理由（T2 主脊判定）：统计 6 邻格中 PLOT_TYPE_MOUNTAIN 的数量，
 	-- 山体内部的格子升级为主脊（>3500m），山脉边缘保持 1500~3500m 山地。
+	-- 理由（API 选型）：建图上下文的 plot userdata 不暴露 GetPlotType/SetPlotType
+	-- （原版地图脚本中这两方法只出现在 allow_mountains_on_coast==false 的死分支，
+	-- 活跃代码一律用 IsMountain/IsHills，见 TerrainGenerator.lua GetNumberAdjacentMountains；
+	-- M1 首测 895 行 pPlot:GetPlotType() 报 function expected instead of nil 实证）。
 	local count = 0;
 	for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
 		local pAdj = Map.GetAdjacentPlot(x, y, dir);
-		if pAdj ~= nil and pAdj:GetPlotType() == g_PLOT_TYPE_MOUNTAIN then
+		if pAdj ~= nil and pAdj:IsMountain() then
 			count = count + 1;
 		end
 	end
@@ -892,14 +896,16 @@ function RR_BuildElevationAndForms()
 				local u = (h - thr) / thr;
 				if u < 0 then u = 0; end
 				if u > 1 then u = 1; end
-				local plotType = pPlot:GetPlotType();
-				if plotType == g_PLOT_TYPE_MOUNTAIN then
+				-- 理由（API 选型）：建图上下文用 IsMountain/IsHills 判定，不用
+				-- GetPlotType（该方法在建图上下文未绑定，实证见
+				-- RR_CountMountainNeighbors 头部注释）。
+				if pPlot:IsMountain() then
 					if u > 0.92 or RR_CountMountainNeighbors(x, y) >= 5 then
 						elev = 3500 + 1000 * u; -- 主脊带
 					else
 						elev = 1500 + 2000 * u; -- 山地带
 					end
-				elseif plotType == g_PLOT_TYPE_HILLS then
+				elseif pPlot:IsHills() then
 					elev = 120 + 360 * u;
 				else
 					elev = 5 + 180 * u;
@@ -968,11 +974,13 @@ end
 
 function RR_ApplyFoothills()
 	-- 理由（T3 最小可见改动）：把策划案"山麓带"落到原版枚举上——与山地相邻的
-	-- 原版平地（PLOT_TYPE_LAND）强制改为丘陵，使 主脊(>3500m)→山麓→低地 的
-	-- 过渡带在游戏中肉眼可见。只动这一步：不改分形、不改山地本体、不重构流程。
-	-- 写法照官方 Tilted_Axis.lua L524 先例：plot:SetPlotType(g_PLOT_TYPE_HILLS,
-	-- false, true)（第三参=延迟区域重算），丘陵地形 = 原地形 + g_TERRAIN_BASE_TO_HILLS_DELTA
-	-- （MapEnums 定义，GRASS+1=GRASS_HILLS 等五对）。循环结束后统一
+	-- 原版平地强制改为丘陵，使 主脊(>3500m)→山麓→低地 的过渡带在游戏中肉眼可见。
+	-- 只动这一步：不改分形、不改山地本体、不重构流程。
+	-- 理由（API 选型，M1 首测修正）：建图上下文 plot userdata 不暴露
+	-- GetPlotType/SetPlotType（原版仅死分支引用；活跃代码用 IsMountain/IsHills/
+	-- 地形变体），故平地判定用 not IsHills and not IsMountain，丘陵提交用
+	-- ApplyBaseTerrain 同款机制——基础地形 + g_TERRAIN_BASE_TO_HILLS_DELTA(=1)
+	-- 写回（MapEnums 定义，GRASS+1=GRASS_HILLS 等五对）。循环结束后统一
 	-- AreaBuilder.Recalculate()（官方注释同款做法）。
 	if g_RR_form == nil or g_RR_elevation == nil then
 		print("[RRMap M1] WARNING: 山麓带跳过——形态层未生成");
@@ -980,6 +988,7 @@ function RR_ApplyFoothills()
 	end
 
 	local converted = 0;
+	local delayed = 0;
 	for y = 0, g_iH - 1 do
 		for x = 0, g_iW - 1 do
 			local i = y * g_iW + x + 1;
@@ -987,12 +996,13 @@ function RR_ApplyFoothills()
 				-- 理由（判定条件）：只收"原版平地"（丘陵本来就是丘陵，不动），
 				-- 且只看与山地相邻这一格——一格宽的山麓裙边，最小侵入。
 				local pPlot = Map.GetPlot(x, y);
-				if pPlot:GetPlotType() == g_PLOT_TYPE_LAND and RR_CountMountainNeighbors(x, y) > 0 then
-					pPlot:SetPlotType(g_PLOT_TYPE_HILLS, false, true);
+				if (not pPlot:IsHills()) and (not pPlot:IsMountain()) and RR_CountMountainNeighbors(x, y) > 0 then
+					TerrainBuilder.SetTerrainType(pPlot, pPlot:GetTerrainType() + g_TERRAIN_BASE_TO_HILLS_DELTA);
 					if not pPlot:IsHills() then
-						-- 理由：IsHills() 在 SetPlotType 后应已为真；此分支防御
-						-- 引擎状态延迟，直接补写丘陵地形枚举（+DELTA 为官方惯用法）。
-						TerrainBuilder.SetTerrainType(pPlot, pPlot:GetTerrainType() + g_TERRAIN_BASE_TO_HILLS_DELTA);
+						-- 理由：防御引擎状态延迟——提交后 IsHills 应为真，若仍未生效
+						-- 只计数告警（下一个 AreaBuilder.Recalculate 后引擎会同步），
+						-- 不让单格异常中断整个建图。
+						delayed = delayed + 1;
 					end
 					-- 理由：海拔/形态表同步到丘陵带，保证后续打印与持久化一致。
 					g_RR_elevation[i] = 200 + (g_RR_elevation[i] or 0) * 0.5; -- 200~300m 山麓
@@ -1006,7 +1016,7 @@ function RR_ApplyFoothills()
 	-- 理由：批量改完统一重算区域（官方 Tilted_Axis 注释：与其反复重算，不如循环末尾一次），
 	-- 否则后续河流/特征/资源生成会读到脏 Area 缓存（调研 A 报告 4.5）。
 	AreaBuilder.Recalculate();
-	print(string.format("[RRMap M1] 山麓带: 平地改丘陵 %d 格", converted));
+	print(string.format("[RRMap M1] 山麓带: 平地改丘陵 %d 格 (IsHills延迟生效 %d 格)", converted, delayed));
 end
 
 function RR_PersistElevation()
