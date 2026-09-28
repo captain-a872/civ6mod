@@ -49,6 +49,92 @@
 			<Text>大河水面</Text>
 		</Row>
 
+		<!-- M3 形态×地带具名矩阵地形卡名（TERRAIN_RR_* 矩阵 14 行的 Name 指向本组键） -->
+		<Row Tag="LOC_TERRAIN_RR_LOW_FOREST_NAME" Language="en_US">
+			<Text>Lowland · Forest</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_LOW_FOREST_NAME" Language="zh_Hans_CN">
+			<Text>低地·森林</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_LOW_STEPPE_NAME" Language="en_US">
+			<Text>Lowland · Steppe</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_LOW_STEPPE_NAME" Language="zh_Hans_CN">
+			<Text>低地·草原</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_LOW_DESERT_NAME" Language="en_US">
+			<Text>Lowland · Desert</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_LOW_DESERT_NAME" Language="zh_Hans_CN">
+			<Text>低地·荒漠</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_LOW_TUNDRA_NAME" Language="en_US">
+			<Text>Lowland · Tundra</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_LOW_TUNDRA_NAME" Language="zh_Hans_CN">
+			<Text>低地·苔原</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_FOREST_NAME" Language="en_US">
+			<Text>Rise · Forest</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_FOREST_NAME" Language="zh_Hans_CN">
+			<Text>隆起·森林</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_STEPPE_NAME" Language="en_US">
+			<Text>Rise · Steppe</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_STEPPE_NAME" Language="zh_Hans_CN">
+			<Text>隆起·草原</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_DESERT_NAME" Language="en_US">
+			<Text>Rise · Desert</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_DESERT_NAME" Language="zh_Hans_CN">
+			<Text>隆起·荒漠</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_TUNDRA_NAME" Language="en_US">
+			<Text>Rise · Tundra</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RISE_TUNDRA_NAME" Language="zh_Hans_CN">
+			<Text>隆起·苔原</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_FOREST_NAME" Language="en_US">
+			<Text>Foothill · Forest</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_FOREST_NAME" Language="zh_Hans_CN">
+			<Text>山麓·森林</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_STEPPE_NAME" Language="en_US">
+			<Text>Foothill · Steppe</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_STEPPE_NAME" Language="zh_Hans_CN">
+			<Text>山麓·草原</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_DESERT_NAME" Language="en_US">
+			<Text>Foothill · Desert</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_DESERT_NAME" Language="zh_Hans_CN">
+			<Text>山麓·荒漠</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_TUNDRA_NAME" Language="en_US">
+			<Text>Foothill · Tundra</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_FOOT_TUNDRA_NAME" Language="zh_Hans_CN">
+			<Text>山麓·苔原</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_MOUNTAIN_NAME" Language="en_US">
+			<Text>Mountain</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_MOUNTAIN_NAME" Language="zh_Hans_CN">
+			<Text>山地</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RIDGE_NAME" Language="en_US">
+			<Text>Snow Ridge</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_RIDGE_NAME" Language="zh_Hans_CN">
+			<Text>雪线主脊</Text>
+		</Row>
+
 		<!-- M2.5 Layer3 微地貌特征卡名 -->
 		<Row Tag="LOC_FEATURE_RR_DELTA_NAME" Language="en_US">
 			<Text>River Delta</Text>

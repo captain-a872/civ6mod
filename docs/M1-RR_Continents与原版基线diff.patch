@@ -1,6 +1,6 @@
 --- /tmp/rrmap_m1/Continents_baseline.lua	2026-09-28 22:34:07
-+++ mod/Maps/RR_Continents.lua	2026-09-29 02:09:39
-@@ -1,4 +1,16 @@
++++ mod/Maps/RR_Continents.lua	2026-09-29 02:26:51
+@@ -1,4 +1,20 @@
  ------------------------------------------------------------------------------
 +-- 文件:    RR_Continents.lua
 +-- 项目:    地大物博·真实地理（RRMap）—— M1 海拔与形态层里程碑
@@ -11,13 +11,17 @@
 +--            T2 确定性连续海拔场（米）→ MapConfiguration 分块持久化（双保险：纯种子可重算）
 +--            T3 形态层 8 类分类 + 山麓带落地（邻山平地强制丘陵，照官方 Tilted_Axis 写法）
 +--            T4 自定义 1:4 尺寸（MAPSIZE_RR_STD14，168×108）配套查询兜底
++--            M2  水文分级：大河水面（TERRAIN_RR_RIVER）+ 急流/漫滩/三角洲标记
++--            M2.5 Layer3 微地貌特征卡（三角洲/急流/漫滩 + 绿洲/沼泽原版直放）
++--            M3  形态×地带具名矩阵地形卡：RR_ApplyTerrainMatrix（14 卡，壳等价，
++--                惰性解析回落原版壳，见 Data/RR_Terrains_Matrix.xml）
 +--          原版版权: Copyright (c) 2014 Firaxis Games, Inc. All rights reserved.
 +------------------------------------------------------------------------------
 +------------------------------------------------------------------------------
  --	FILE:	 Continents.lua
  --	AUTHOR:  
  --	PURPOSE: Base game script - Produces widely varied continents.
-@@ -25,6 +37,58 @@
+@@ -25,6 +41,58 @@
  local world_age_normal = 3;
  local world_age_old = 2;
  
@@ -76,7 +80,7 @@
  -------------------------------------------------------------------------------
  function GenerateMap()
  	print("Generating Continents Map");
-@@ -33,6 +97,10 @@
+@@ -33,6 +101,10 @@
  	-- Set globals
  	g_iW, g_iH = Map.GetGridSize();
  	g_iFlags = TerrainBuilder.GetFractalFlags();
@@ -87,7 +91,7 @@
  	local temperature = MapConfiguration.GetValue("temperature"); -- Default setting is Temperate.
  	if temperature == 4 then
  		temperature  =  1 + TerrainBuilder.GetRandomNumber(3, "Random Temperature- Lua");
-@@ -51,6 +119,8 @@
+@@ -51,6 +123,8 @@
  	end
  
  	plotTypes = GeneratePlotTypes(world_age);
@@ -96,7 +100,7 @@
  	terrainTypes = GenerateTerrainTypes(plotTypes, g_iW, g_iH, g_iFlags, false, temperature);
  	ApplyBaseTerrain(plotTypes, terrainTypes, g_iW, g_iH);
  
-@@ -64,27 +134,73 @@
+@@ -64,27 +138,80 @@
  	AddTerrainFromContinents(plotTypes, terrainTypes, world_age, g_iW, g_iH, iContinentBoundaryPlots);
  
  	AreaBuilder.Recalculate();
@@ -143,6 +147,13 @@
 +	RR_PlaceLayer3Features();
 +	rrStageClock = RR_Probe("Layer3特征", rrStageClock);
 +
++	-- RR M3：形态×地带具名矩阵地形卡落地。
++	-- 理由（插入点）：Layer3 特征直放（绿洲/沼泽判定读原版地形 ID）之后、
++	-- AddFeatures 之前——原版特征生成器随后按 Feature_ValidTerrains
++	-- （已复制到矩阵地形）在矩阵卡上正常生林/雨林，资源生成同理。
++	RR_ApplyTerrainMatrix();
++	rrStageClock = RR_Probe("矩阵地形", rrStageClock);
++
  	AddFeatures();
  	TerrainBuilder.AnalyzeChokepoints();
  	
@@ -172,7 +183,7 @@
  	
  	resourcesConfig = MapConfiguration.GetValue("resources");
  	local startConfig = MapConfiguration.GetValue("start");-- Get the start config
-@@ -93,6 +209,7 @@
+@@ -93,6 +220,7 @@
  		START_CONFIG = startConfig,
  	};
  	local resGen = ResourceGenerator.Create(args);
@@ -180,7 +191,7 @@
  
  	print("Creating start plot database.");
  	
-@@ -106,8 +223,13 @@
+@@ -106,8 +234,13 @@
  		START_CONFIG = startConfig,
  	};
  	local start_plot_database = AssignStartingPlots.Create(args)
@@ -194,7 +205,7 @@
  end
  
  -------------------------------------------------------------------------------
-@@ -140,6 +262,9 @@
+@@ -140,6 +273,9 @@
  	else
  		water_percent = TerrainBuilder.GetRandomNumber(sea_level_high - sea_level_low, "Random Sea Level - Lua") + sea_level_low  + 1;
  	end
@@ -204,7 +215,7 @@
  
  	-- Set values for hills and mountains according to World Age chosen by user.
  	local adjustment = world_age;
-@@ -244,6 +369,10 @@
+@@ -244,6 +380,10 @@
  		-- print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
  		-- print(".");
  	end
@@ -215,7 +226,7 @@
  	
  	local args = {};
  	args.world_age = world_age;
-@@ -664,4 +793,873 @@
+@@ -664,4 +804,1051 @@
  	end
  
  
@@ -491,9 +502,23 @@
 +	-- 主脊带（>3500m，形态层判定）换雪山地形变体 TERRAIN_SNOW_MOUNTAIN
 +	-- （原版雪顶皮肤）——高海拔山系呈现雪线核心，与外围山地肉眼分层。
 +	-- 只改地形变体不改地块类型（仍为不可通行山脉），对河流/特征/资源零扰动。
++	-- 理由（M3 具名卡片化）：雪顶皮肤升级为具名卡 TERRAIN_RR_RIDGE"雪线主脊"，
++	-- 惰性解析（同 RR_PlaceLayer3Features lazyId 模式），解析失败回落
++	-- SNOW_MOUNTAIN——雪顶视觉与悬停描述退回原版，地图必可生成。
 +	if g_RR_form == nil then
 +		print("[RRMap M1] WARNING: 雪线主脊跳过——形态层未生成");
 +		return;
++	end
++	-- 理由：lazyId 就地定义而非上提全局——解析时机须在 GenerateMap 内
++	-- （游戏库此时已就绪），全局位置无法保证。
++	local function lazyTerrainId(name)
++		local ok, v = pcall(function() return GetGameInfoIndex("Terrains", name); end);
++		if ok and v ~= nil and v >= 0 then return v; end
++		return -1;
++	end
++	local ridgeId = lazyTerrainId("TERRAIN_RR_RIDGE");
++	if ridgeId < 0 then
++		ridgeId = g_TERRAIN_TYPE_SNOW_MOUNTAIN; -- 回落：原版雪顶（M1.5 行为）
 +	end
 +	local capped = 0;
 +	for y = 0, g_iH - 1 do
@@ -501,14 +526,14 @@
 +			local i = y * g_iW + x + 1;
 +			if g_RR_form[i] == "主脊" then
 +				local pPlot = Map.GetPlot(x, y);
-+				if pPlot:IsMountain() and pPlot:GetTerrainType() ~= g_TERRAIN_TYPE_SNOW_MOUNTAIN then
-+					TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_SNOW_MOUNTAIN);
++				if pPlot:IsMountain() and pPlot:GetTerrainType() ~= ridgeId then
++					TerrainBuilder.SetTerrainType(pPlot, ridgeId);
 +					capped = capped + 1;
 +				end
 +			end
 +		end
 +	end
-+	print(string.format("[RRMap M1] 雪线主脊: 雪顶 %d 格", capped));
++	print(string.format("[RRMap M3] 雪线主脊: 具名卡 %d 格 (地形=%d)", capped, ridgeId));
 +end
 +
 +function RR_PersistElevation()
@@ -1090,4 +1115,168 @@
 +	end
 +	print(string.format("[RRMap M2] Layer3特征: 三角洲 %d, 急流 %d, 漫滩 %d, 绿洲 %d, 沼泽 %d, 跳过(宿主不适) %d",
 +		placedDelta, placedRapids, placedFlood, placedOasis, placedMarsh, skipped));
++end
++
++-------------------------------------------------------------------------------
++-- RR M3：形态×地带具名矩阵地形卡（具名卡片化里程碑）
++-- 依据：
++--   引擎事实（已验证）：一块地只有一个 terrain type；丘陵性内建于地形
++--   （*_HILLS 地形要求 plot type 为 hills，SetTerrainType 会同步 plot type，
++--   ApplyFoothills 实证）；山地格渲染由 plot type 管，悬停显示 terrain 名
++--   （先例 SNOW_MOUNTAIN 显示"雪山"）。
++--   壳等价原则：每个矩阵地形借对应原版壳（属性列/产出/适地表逐值照抄，
++--   见 Data/RR_Terrains_Matrix.xml 头注释），本轮不改任何机制数值；
++--   悬停从"草原/平原"等隐式表达变为"低地·森林/隆起·草原"等具名卡。
++-- 诚实标注：
++--   (a) 隆起/山麓落在原版平地上的格子，写丘陵壳地形时 plot type 同步为
++--       hills（与 ApplyFoothills 同款机制）——这些格产出由平地壳变丘陵壳，
++--       是"形态=岗地丘陵"的设计落地，不是数值偷改；
++--   (b) 极地低地（TERRAIN_SNOW/SNOW_HILLS）不建卡，保持原版"雪原"；
++--   (c) terrainTypes 台账（GenerateTerrainTypes 返回值）在本函数后不再刷新，
++--       后续 AddCliffs 等只按陆/水大类读它，矩阵改动不跨陆水边界，安全。
++-------------------------------------------------------------------------------
++
++function RR_ApplyTerrainMatrix()
++	-- 理由（插入点见 GenerateMap）：Layer3 特征直放后、AddFeatures 前。
++	-- 全程无随机数消耗（只读形态表 + SetTerrainType），不扰动原版随机流。
++	if g_RR_form == nil then
++		print("[RRMap M3] WARNING: 矩阵地形跳过——形态层未生成");
++		return;
++	end
++
++	-- 理由（惰性解析）：照 RR_PlaceLayer3Features lazyId 模式——自定义地形由
++	-- UpdateDatabase 加载，调用点查询最稳；解析失败(-1)回落原版壳地形，
++	-- 保证地图必可生成（回落时该组合保持隐式表达，功能零损失）。
++	local function lazyTerrainId(name)
++		local ok, v = pcall(function() return GetGameInfoIndex("Terrains", name); end);
++		if ok and v ~= nil and v >= 0 then return v; end
++		return -1;
++	end
++
++	-- 地带判定表：原版地形 → 地带键（策划案 Layer2 五带中除雪线外的四带；
++	-- 雪原/雪丘不建卡，不进表）。壳的平地/丘陵两个变体同地带。
++	local zoneByTerrain = {};
++	local zoneDefs = {
++		{"FOREST", {"TERRAIN_GRASS", "TERRAIN_GRASS_HILLS"}},
++		{"STEPPE", {"TERRAIN_PLAINS", "TERRAIN_PLAINS_HILLS"}},
++		{"DESERT", {"TERRAIN_DESERT", "TERRAIN_DESERT_HILLS"}},
++		{"TUNDRA", {"TERRAIN_TUNDRA", "TERRAIN_TUNDRA_HILLS"}},
++	};
++	for _, zd in ipairs(zoneDefs) do
++		for _, tname in ipairs(zd[2]) do
++			local tid = lazyTerrainId(tname);
++			if tid >= 0 then zoneByTerrain[tid] = zd[1]; end
++		end
++	end
++
++	-- 矩阵查表：(形态, 地带) → {矩阵地形名, 壳地形名}；壳名仅作解析失败回落
++	-- 的对照与探针标注（回落=不动格子，保持原版壳地形原样）。
++	local matrix = {
++		["低地"] = {
++			FOREST = {"TERRAIN_RR_LOW_FOREST", "TERRAIN_GRASS"},
++			STEPPE = {"TERRAIN_RR_LOW_STEPPE", "TERRAIN_PLAINS"},
++			DESERT = {"TERRAIN_RR_LOW_DESERT", "TERRAIN_DESERT"},
++			TUNDRA = {"TERRAIN_RR_LOW_TUNDRA", "TERRAIN_TUNDRA"},
++		},
++		["隆起"] = {
++			FOREST = {"TERRAIN_RR_RISE_FOREST", "TERRAIN_GRASS_HILLS"},
++			STEPPE = {"TERRAIN_RR_RISE_STEPPE", "TERRAIN_PLAINS_HILLS"},
++			DESERT = {"TERRAIN_RR_RISE_DESERT", "TERRAIN_DESERT_HILLS"},
++			TUNDRA = {"TERRAIN_RR_RISE_TUNDRA", "TERRAIN_TUNDRA_HILLS"},
++		},
++		["山麓"] = {
++			FOREST = {"TERRAIN_RR_FOOT_FOREST", "TERRAIN_GRASS_HILLS"},
++			STEPPE = {"TERRAIN_RR_FOOT_STEPPE", "TERRAIN_PLAINS_HILLS"},
++			DESERT = {"TERRAIN_RR_FOOT_DESERT", "TERRAIN_DESERT_HILLS"},
++			TUNDRA = {"TERRAIN_RR_FOOT_TUNDRA", "TERRAIN_TUNDRA_HILLS"},
++		},
++	};
++
++	-- 预解析矩阵地形 ID：循环内只做数组查表，不在热路径反复 pcall。
++	local matrixId = {};
++	for form, zones in pairs(matrix) do
++		matrixId[form] = {};
++		for zone, names in pairs(zones) do
++			matrixId[form][zone] = lazyTerrainId(names[1]);
++		end
++	end
++	-- 山地/主脊：不查地带，按形态直落。主脊通常已被 RR_ApplySnowRidge
++	-- 写成具名卡，此处兜底防御（如该函数因形态表缺失跳过）。
++	local mountainId = lazyTerrainId("TERRAIN_RR_MOUNTAIN");
++	local ridgeId = lazyTerrainId("TERRAIN_RR_RIDGE");
++	local ridgeFallback = g_TERRAIN_TYPE_SNOW_MOUNTAIN;
++
++	-- 探针统计：每个形态×地带组合的落地格数 + 例外路径计数。
++	local counts = {};
++	local flatToHills = 0;	-- 隆起/山麓的平地格同步转为 hills 的格数
++	local fallbackCount = 0;	-- 矩阵 ID 解析失败回落壳（格子未动）的格数
++	local skippedSnow = 0;		-- 极地（雪原/雪丘）不建卡保持原版的格数
++
++	for y = 0, g_iH - 1 do
++		for x = 0, g_iW - 1 do
++			local i = y * g_iW + x + 1;
++			local form = g_RR_form[i];
++			local pPlot = Map.GetPlot(x, y);
++			if form == "山地" then
++				if mountainId >= 0 and pPlot:IsMountain()
++					and pPlot:GetTerrainType() ~= mountainId then
++					-- 理由：所有非雪线山地统一"山地"具名卡；plot type 本为
++					-- mountain，RR_MOUNTAIN 壳行 Mountain="true" 与之相容。
++					TerrainBuilder.SetTerrainType(pPlot, mountainId);
++					counts["山地"] = (counts["山地"] or 0) + 1;
++				end
++			elseif form == "主脊" then
++				if pPlot:IsMountain() then
++					local target = ridgeId >= 0 and ridgeId or ridgeFallback;
++					if pPlot:GetTerrainType() ~= target then
++						TerrainBuilder.SetTerrainType(pPlot, target);
++						counts["主脊"] = (counts["主脊"] or 0) + 1;
++					end
++				end
++			elseif matrix[form] ~= nil then
++				local zone = zoneByTerrain[pPlot:GetTerrainType()];
++				if zone ~= nil then
++					local mid = matrixId[form][zone];
++					if mid >= 0 then
++						if (form == "隆起" or form == "山麓")
++							and (not pPlot:IsHills()) and (not pPlot:IsMountain()) then
++							-- 理由（丘陵壳配平）：丘陵壳地形要求 plot type 为
++							-- hills（引擎事实）；写 *_HILLS 壳地形即由引擎同步
++							-- plot type（ApplyFoothills 同款机制），把"岗地丘陵"
++							-- 形态在平地格上落地为真丘陵。
++							flatToHills = flatToHills + 1;
++						end
++						TerrainBuilder.SetTerrainType(pPlot, mid);
++						local key = form .. "·" .. zone;
++						counts[key] = (counts[key] or 0) + 1;
++					else
++						-- 理由：矩阵 ID 未注册（如 modinfo 动作加载失败）——
++						-- 保持原版壳地形不动，功能与数值完全等价，仅少一张名卡。
++						fallbackCount = fallbackCount + 1;
++					end
++				else
++					-- 理由：雪原/雪丘等不建卡地带（极地低地保持原版"雪原"）。
++					skippedSnow = skippedSnow + 1;
++				end
++			end
++		end
++	end
++
++	-- 理由：批量改完统一重算区域（ApplyFoothills 同款官方注释），否则后续
++	-- 特征/资源生成器会读到脏 Area 缓存。
++	AreaBuilder.Recalculate();
++
++	-- 理由（探针）：按固定顺序逐组合打印落地格数，tuner 日志可立即核对
++	-- 12 个形态×地带组合 + 山地/主脊是否全覆盖、回落路径是否被意外触发。
++	local order = {"低地·FOREST", "低地·STEPPE", "低地·DESERT", "低地·TUNDRA",
++		"隆起·FOREST", "隆起·STEPPE", "隆起·DESERT", "隆起·TUNDRA",
++		"山麓·FOREST", "山麓·STEPPE", "山麓·DESERT", "山麓·TUNDRA",
++		"山地", "主脊"};
++	local parts = {};
++	for _, key in ipairs(order) do
++		table.insert(parts, key .. "=" .. tostring(counts[key] or 0));
++	end
++	print("[RRMap M3] 矩阵地形落地: " .. table.concat(parts, " "));
++	print(string.format("[RRMap M3] 矩阵地形例外: 平地转丘陵 %d, 回落原版壳 %d, 极地保持原版 %d",
++		flatToHills, fallbackCount, skippedSnow));
 +end

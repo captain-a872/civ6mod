@@ -63,6 +63,10 @@
 		<UpdateDatabase id="RR_FEATURE_DATA">
 			<File>Data/RR_Features.xml</File>
 		</UpdateDatabase>
+		<!-- M3 形态×地带具名矩阵地形（14 地形卡 + 壳等价适地表复制）：独立动作 -->
+		<UpdateDatabase id="RR_TERRAIN_MATRIX_DATA">
+			<File>Data/RR_Terrains_Matrix.xml</File>
+		</UpdateDatabase>
 	</InGameActions>
 
 	<!-- modinfo 自身引用文本（Properties 段使用）的多语言翻译 -->
@@ -94,6 +98,7 @@
 		<File>Scripts/RR_Debug.lua</File>
 		<File>Data/RR_Terrain.xml</File>
 		<File>Data/RR_Features.xml</File>
+		<File>Data/RR_Terrains_Matrix.xml</File>
 		<File>Text/RR_Text.xml</File>
 		<File>README.md</File>
 	</Files>
