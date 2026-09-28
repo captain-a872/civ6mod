@@ -22,10 +22,15 @@ mod/
 
 | 平台 | 路径 |
 |------|------|
-| **macOS** | `~/Library/Application Support/Sid Meier's Civilization VI/Mods/` |
+| **macOS（Aspyr 移植版，实测）** | `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods/`（注意是**双层嵌套**，外层目录只有 Aspyr/Firaxis Games 子目录） |
 | **Windows** | `C:\Users\<用户名>\Documents\My Games\Sid Meier's Civilization VI\Mods\` |
 
-复制后形如 `.../Mods/mod/RRMap.modinfo`（外层文件夹名随意，可改成 `RRMap`）。
+复制后形如 `.../Mods/mod/RRMap.modinfo`（外层文件夹名随意，可改成 `RRMap`）。开发期推荐用符号链接代替复制（改代码立即生效，无需重新拷贝）：
+
+```bash
+ln -s "/Users/lyg/Documents/Kimi/Workspaces/文明6/civ6mod/mod" \
+  ~/Library/Application\ Support/Sid\ Meier\'s\ Civilization\ VI/Sid\ Meier\'s\ Civilization\ VI/Mods/RRMap
+```
 
 > 跨平台要点：所有 mod 文件为纯文本、UTF-8 编码、LF 换行、正斜杠路径，Mac/Windows 通用。
 
@@ -54,7 +59,7 @@ mod/
 
 | 平台 | 路径 |
 |------|------|
-| **macOS** | `~/Library/Application Support/Sid Meier's Civilization VI/Logs/Lua.log` |
+| **macOS（Aspyr 移植版，实测）** | `~/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Logs/Lua.log` |
 | **Windows** | `Documents\My Games\Sid Meier's Civilization VI\Logs\Lua.log` |
 
 同目录下 `Database.log` 可排查注册问题（Maps 表行是否写入配置库）。
