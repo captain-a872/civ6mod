@@ -1,21 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- ============================================================================
-     RRMap 前端配置：向"配置数据库"（Configuration）的 Maps 表注册自定义地图脚本。
+     RRMap 前端配置：向"配置数据库"（Configuration）注册自定义地图脚本与自定义尺寸。
 
-     游戏"创建游戏 → 地图类型"下拉列表的数据来源就是 Maps 表。
-     本写法对照真实生产 Mod YnAMP 的 Maps/GiantEarth/Config.xml：
-       <Maps>
-           <Row File="GiantEarth.lua" Name="LOC_..." Description="LOC_..." SortIndex="1"/>
-       </Maps>
+     游戏"创建游戏 → 地图类型"下拉列表的数据来源就是 Maps 表；
+     "地图尺寸"下拉列表的数据来源是 MapSizes 表（Domain 列区分归属哪张地图）。
+     本写法对照真实生产数据（游戏内置 Base/Assets/Configuration/Data/EarthMaps.xml，
+     即地球静态地图的 per-map 尺寸列表范式，效果与 YnAMP 自定义尺寸一致）：
+       <Maps>            —— 地图脚本注册（File 用裸文件名，与 ImportFiles 导入同名）
+       <MapSizes>        —— 自定义尺寸行，Domain="RR_Continents.lua" 表示只对本图生效
+       <MapDomainOverrides> —— 把本图的"地图尺寸"下拉框切换到 RR_Continents.lua 域
+                              （注释原文：This is a REPLACEMENT not a Union）
      说明：
        File      —— 脚本文件名（裸文件名，不含目录；须与 ImportFiles 导入的文件同名，
                      且不能与游戏原文件或其他 Mod 重名，故用 RR_ 前缀）
        Name      —— 地图类型显示名（LOC 标签，翻译见 Text/RR_Text.xml）
        Description - 地图类型描述（LOC 标签）
        SortIndex —— 在地图类型列表中的排序位置，取 40 避开原版脚本的序号
+       MapSizes 行 SortIndex 40/50 避开原版 10~60（原版最大=MAPSIZE_HUGE 60）
      ============================================================================ -->
 <GameInfo>
 	<Maps>
 		<Row File="RR_Continents.lua" Name="LOC_MAP_RR_CONTINENTS_NAME" Description="LOC_MAP_RR_CONTINENTS_DESCRIPTION" SortIndex="40"/>
 	</Maps>
+
+	<!-- T4 自定义 1:4 尺寸（配置库侧）：1:4 比例尺下"标准"档位 = 标准图 2 倍网格。
+	     MAPSIZE_RR_STD14 = 168x108（18144 格）。MaxPlayers/MaxCityStates 沿用原版
+	     MAPSIZE_HUGE 的上限（20/24），低于 62 硬上限。 -->
+	<MapSizes>
+		<Row Domain="RR_Continents.lua" MapSizeType="MAPSIZE_RR_STD14" Name="LOC_MAPSIZE_RR_STD14_NAME" Description="LOC_MAPSIZE_RR_STD14_DESCRIPTION" MinPlayers="2" MaxPlayers="20" DefaultPlayers="8" MinCityStates="0" MaxCityStates="24" DefaultCityStates="12" SortIndex="40"/>
+	</MapSizes>
+
+	<!-- T4 本图尺寸选择器切换：照 EarthMaps.xml 生产范式（ParameterId="MapSize"）。
+	     效果是选 RR_Continents.lua 时，尺寸下拉只出现上面的 1:4 自定义档位。 -->
+	<MapDomainOverrides>
+		<Row Map="RR_Continents.lua" ParameterId="MapSize" Domain="RR_Continents.lua"/>
+	</MapDomainOverrides>
 </GameInfo>

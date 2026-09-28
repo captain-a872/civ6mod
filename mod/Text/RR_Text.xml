@@ -27,5 +27,19 @@
 			<Text>M0 开发用地图。在"地大物博"框架内复用原版大陆生成流程（海陆、地形、河流、湖泊、地貌、资源、出生点），保证可加载可开局。真实海拔与 1:4 网格将在后续里程碑加入。</Text>
 		</Row>
 
+		<!-- T4 自定义 1:4 尺寸名称（配置库 MapSizes 行与游戏内 Maps 行共用的 LOC 键） -->
+		<Row Tag="LOC_MAPSIZE_RR_STD14_NAME" Language="en_US">
+			<Text>Standard 1:4 (168×108)</Text>
+		</Row>
+		<Row Tag="LOC_MAPSIZE_RR_STD14_NAME" Language="zh_Hans_CN">
+			<Text>标准 1:4（168×108）</Text>
+		</Row>
+		<Row Tag="LOC_MAPSIZE_RR_STD14_DESCRIPTION" Language="en_US">
+			<Text>RRMap real-geography scale. 168×108 plots (4× the area of Standard) — smoke-test size for the M1 elevation &amp; landform milestone.</Text>
+		</Row>
+		<Row Tag="LOC_MAPSIZE_RR_STD14_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>地大物博真实地理比例尺。168×108 格（面积为"标准"的 4 倍）——M1 海拔与形态层里程碑的性能冒烟尺寸。</Text>
+		</Row>
+
 	</LocalizedText>
 </GameData>

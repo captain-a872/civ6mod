@@ -40,6 +40,12 @@
 		<ImportFiles id="RR_MAP_SCRIPT">
 			<File>Maps/RR_Continents.lua</File>
 		</ImportFiles>
+		<!-- T4 自定义尺寸（MAPSIZE_RR_STD14）：向游戏库 Maps 表插 GridWidth/GridHeight
+		     尺寸行。不定义 GetMapInitData（M0 首嫌，禁用）时，引擎建网格就读这张表，
+		     此文件是 1:4 网格能被建出来的必要条件（原版六个尺寸行同表定义）。 -->
+		<UpdateDatabase id="RR_MAPS_DATA">
+			<File>Data/RR_MapsGameplay.xml</File>
+		</UpdateDatabase>
 		<UpdateText id="RR_INGAME_TEXT">
 			<File>Text/RR_Text.xml</File>
 		</UpdateText>
@@ -69,6 +75,7 @@
 	<Files>
 		<File>RRMap.modinfo</File>
 		<File>Data/RR_Config.xml</File>
+		<File>Data/RR_MapsGameplay.xml</File>
 		<File>Maps/RR_Continents.lua</File>
 		<File>Text/RR_Text.xml</File>
 		<File>README.md</File>

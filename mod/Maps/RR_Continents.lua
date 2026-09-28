@@ -1,10 +1,13 @@
 ------------------------------------------------------------------------------
 -- 文件:    RR_Continents.lua
--- 项目:    地大物博·真实地理（RRMap）—— M0 骨架里程碑
--- 基线说明: 本文件为游戏内置 Expansion2（风云变幻）Continents.lua 的逐字节
---          精确副本（M0 排障结论：与原版任何偏离都可能导致开局失败，
---          见 docs/模块1-实现计划.md 风险登记）。
---          M1 起从本基线出发接管真实地理分层（海拔→形态→水文）。
+-- 项目:    地大物博·真实地理（RRMap）—— M1 海拔与形态层里程碑
+-- 基线说明: 本文件以游戏内置 Expansion2（风云变幻）Continents.lua 的逐字节
+--          副本为基线（M0 排障结论，见 docs/模块1-实现计划.md 风险登记）。
+--          M1 改动（每处 diff 均有"理由"注释，可用原版 Continents.lua 做 diff 审查）：
+--            T1 GenerateMap 全程阶段探针 [RRMap M1]（os.clock 计时）
+--            T2 确定性连续海拔场（米）→ MapConfiguration 分块持久化（双保险：纯种子可重算）
+--            T3 形态层 8 类分类 + 山麓带落地（邻山平地强制丘陵，照官方 Tilted_Axis 写法）
+--            T4 自定义 1:4 尺寸（MAPSIZE_RR_STD14，168×108）配套查询兜底
 --          原版版权: Copyright (c) 2014 Firaxis Games, Inc. All rights reserved.
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
@@ -34,6 +37,33 @@ local world_age_new = 5;
 local world_age_normal = 3;
 local world_age_old = 2;
 
+-- RR M1 T2：海拔场所需的捕获量。
+-- 理由：海平面阈值 water_percent / 分形阈值 iWaterThreshold 在 GeneratePlotTypes
+-- 内部算出（局部变量），海拔场需要复用同一阈值才能与海陆结果严格一致；在此处
+-- 捕获不消耗任何随机数流（避免扰动原版生成结果的可复现性——调研 A 报告 4.5：
+-- 改动随机调用顺序会破坏同种子复现）。
+local g_RR_waterPercent = nil;		-- 海平面百分比（1-100），GeneratePlotTypes 捕获
+local g_RR_waterThreshold = nil;	-- 最终分形海平面阈值（分形高度单位），GeneratePlotTypes 捕获
+local g_RR_elevation = nil;			-- 海拔表：[y*g_iW+x+1] = 米（Lua 1-based），T2 生成
+local g_RR_form = nil;				-- 形态表：[y*g_iW+x+1] = 形态名（策划案 1.2 的 8 类），T2/T3 生成
+
+local function RR_Clock()
+	-- 理由（T1）：防御——若地图生成沙盒裁剪了 os 库，探针退化为 0 值计时而非崩溃。
+	if os ~= nil and os.clock ~= nil then
+		return os.clock();
+	else
+		return 0;
+	end
+end
+
+local function RR_Probe(stageName, sinceClock)
+	-- 理由（T1）：阶段探针统一出口。带版本前缀 "[RRMap M1]"，供 tuner 日志
+	-- grep 定位中止点（tools/README.md 流程）；string.format 防 nil 拼接崩溃。
+	local now = RR_Clock();
+	print(string.format("[RRMap M1] %s (%.2fs)", stageName, now - sinceClock));
+	return now;
+end
+
 -------------------------------------------------------------------------------
 function GenerateMap()
 	print("Generating Continents Map");
@@ -42,6 +72,10 @@ function GenerateMap()
 	-- Set globals
 	g_iW, g_iH = Map.GetGridSize();
 	g_iFlags = TerrainBuilder.GetFractalFlags();
+	-- 理由（T1）：开始探针。打印网格尺寸与尺寸类型，是 tuner 日志里本脚本
+	-- 存活的第一证据（没有这一行 = 脚本没被加载，按 SKILL 第三节 SOP 先查注册链路）。
+	local rrStartClock = RR_Clock();
+	local rrStageClock = RR_Probe(string.format("开始 %dx%d size=%s", g_iW, g_iH, tostring(Map.GetMapSize())), rrStartClock);
 	local temperature = MapConfiguration.GetValue("temperature"); -- Default setting is Temperate.
 	if temperature == 4 then
 		temperature  =  1 + TerrainBuilder.GetRandomNumber(3, "Random Temperature- Lua");
@@ -60,6 +94,8 @@ function GenerateMap()
 	end
 
 	plotTypes = GeneratePlotTypes(world_age);
+	-- 理由（T1）：分形海陆阶段探针（含 ApplyTectonics/孤立山在内的全部 plot 类型定稿）。
+	rrStageClock = RR_Probe("分形海陆", rrStageClock);
 	terrainTypes = GenerateTerrainTypes(plotTypes, g_iW, g_iH, g_iFlags, false, temperature);
 	ApplyBaseTerrain(plotTypes, terrainTypes, g_iW, g_iH);
 
@@ -73,27 +109,59 @@ function GenerateMap()
 	AddTerrainFromContinents(plotTypes, terrainTypes, world_age, g_iW, g_iH, iContinentBoundaryPlots);
 
 	AreaBuilder.Recalculate();
+	rrStageClock = RR_Probe("地形", rrStageClock);
+
+	-- RR M1 T2/T3：海拔场 + 形态层 + 山麓带。
+	-- 理由（插入点）：此时 plot 类型与地形均已定稿（AddTerrainFromContinents 之后），
+	-- 且仍在 AddRivers 之前——满足原版不变量"河流发源于高地，丘陵/山地布局须在
+	-- 河流前定稿"（调研 A 报告 M1 节），山麓带改动才能被河流/特征/资源全程看到。
+	RR_BuildElevationAndForms();
+	RR_ApplyFoothills();
+	RR_PersistElevation();
+	RR_PrintElevationSamples();
+	rrStageClock = RR_Probe("海拔/形态层", rrStageClock);
 
 	-- River generation is affected by plot types, originating from highlands and preferring to traverse lowlands.
 	AddRivers();
+	rrStageClock = RR_Probe("河流", rrStageClock);
 	
 	-- Lakes would interfere with rivers, causing them to stop and not reach the ocean, if placed any sooner.
-	local numLargeLakes = GameInfo.Maps[Map.GetMapSize()].Continents;
+	-- 理由（T4 兜底）：自定义尺寸（MAPSIZE_RR_*）在 GameInfo.Maps 的行若匹配失败
+	-- （row 为 nil，即 SKILL 所述 Hash 匹配失败坑的同类风险），回落到标准尺寸的默认值，
+	-- 避免 nil 解引用崩溃；标准尺寸行存在时行为与原版逐字节一致。
+	local rrMapRow = GameInfo.Maps[Map.GetMapSize()];
+	local numLargeLakes = 4;
+	if rrMapRow ~= nil and rrMapRow.Continents ~= nil and rrMapRow.Continents > 0 then
+		numLargeLakes = rrMapRow.Continents;
+	end
 	AddLakes(numLargeLakes);
+	rrStageClock = RR_Probe("湖泊", rrStageClock);
 
 	AddFeatures();
 	TerrainBuilder.AnalyzeChokepoints();
 	
 	print("Adding cliffs");
 	AddCliffs(plotTypes, terrainTypes);
+	rrStageClock = RR_Probe("崖岸", rrStageClock);
 
+	-- 理由（T1）：基线 Continents.lua 没有独立火山阶段（GS 火山由特征生成器统一处理，
+	-- 对照 BBS 版 L125 的 AddVolcanos 才知差异），此处打印说明性探针避免 tuner 日志
+	-- 出现"阶段缺失=中止"的误读。
+	rrStageClock = RR_Probe("火山(跳过:基线无独立火山阶段)", rrStageClock);
+
+	-- 理由（T4 兜底）：同 numLargeLakes，自定义尺寸行匹配失败时回落标准值 5。
+	local rrNumNW = 5;
+	if rrMapRow ~= nil and rrMapRow.NumNaturalWonders ~= nil and rrMapRow.NumNaturalWonders > 0 then
+		rrNumNW = rrMapRow.NumNaturalWonders;
+	end
 	local args = {
-		numberToPlace = GameInfo.Maps[Map.GetMapSize()].NumNaturalWonders,
+		numberToPlace = rrNumNW,
 	};
 	local nwGen = NaturalWonderGenerator.Create(args);
 
 	AddFeaturesFromContinents();
 	MarkCoastalLowlands();
+	rrStageClock = RR_Probe("特征", rrStageClock);
 	
 	resourcesConfig = MapConfiguration.GetValue("resources");
 	local startConfig = MapConfiguration.GetValue("start");-- Get the start config
@@ -102,6 +170,7 @@ function GenerateMap()
 		START_CONFIG = startConfig,
 	};
 	local resGen = ResourceGenerator.Create(args);
+	rrStageClock = RR_Probe("资源", rrStageClock);
 
 	print("Creating start plot database.");
 	
@@ -115,8 +184,13 @@ function GenerateMap()
 		START_CONFIG = startConfig,
 	};
 	local start_plot_database = AssignStartingPlots.Create(args)
+	rrStageClock = RR_Probe("出生点", rrStageClock);
 
 	local GoodyGen = AddGoodies(g_iW, g_iH);
+	-- 理由（T1/T4）：完成探针，打印生成总耗时（T4 性能冒烟数据源，无硬阈值，先拿数据）
+	-- 与形态分布计数（T3 肉眼可见性的事后核对）。
+	RR_Probe(string.format("完成 总耗时=%.2fs", RR_Clock() - rrStartClock), rrStageClock);
+	RR_PrintFormStats();
 end
 
 -------------------------------------------------------------------------------
@@ -149,6 +223,9 @@ function GeneratePlotTypes(world_age)
 	else
 		water_percent = TerrainBuilder.GetRandomNumber(sea_level_high - sea_level_low, "Random Sea Level - Lua") + sea_level_low  + 1;
 	end
+	-- 理由（T2）：捕获海平面百分比供海拔场复用同一阈值（不重复调用随机数，
+	-- 避免扰动原版随机流顺序）。
+	g_RR_waterPercent = water_percent;
 
 	-- Set values for hills and mountains according to World Age chosen by user.
 	local adjustment = world_age;
@@ -253,6 +330,10 @@ function GeneratePlotTypes(world_age)
 		-- print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
 		-- print(".");
 	end
+
+	-- 理由（T2）：捕获最终生效的海陆分形阈值（最后一次尝试的 iWaterThreshold，
+	-- 与最终 plotTypes 严格同阈值），供海拔场把分形高度换算为水深/陆高。
+	g_RR_waterThreshold = iWaterThreshold;
 	
 	local args = {};
 	args.world_age = world_age;
@@ -673,4 +754,336 @@ function GenerateCenterRift(plotTypes)
 	end
 
 
+end
+-------------------------------------------------------------------------------
+-- RR M1 海拔场与形态层（T2/T3 实现块）
+--
+-- 确定性论证（M1 纪律：双保险）：
+--   本块全部函数是【纯函数】——只读取本局已生成的 g_continentsFrac 分形高度与
+--   地块状态，不创建新 Fractal、不调用 GetRandomNumber。因此：
+--     (a) 不扰动原版随机流/分形创建顺序 → 同种子下原版生成结果与基线逐格一致；
+--     (b) 海拔场是"同种子地图状态"的确定函数 → 读档/重开可由种子精确重算。
+--   MapConfiguration 持久化（RR_PersistElevation）是锦上添花的第一保险；
+--   种子重算是第二保险。两者皆失败也不影响地图生成本身（全程 pcall 防御）。
+-------------------------------------------------------------------------------
+
+-- 海拔模型公式（T2，单位米）：
+--   记 h = g_continentsFrac:GetHeight(x,y)（海陆分形原始高度），
+--       thr = g_RR_waterThreshold（海平面阈值，GeneratePlotTypes 捕获）。
+--   陆侧归一 u = clamp((h - thr) / thr, 0, 1)（海岸带 u≈0，分形高处 u→1）
+--   水侧归一 d = clamp((thr - h) / thr, 0, 1)（海岸线 d=0，远洋 d→1）
+--
+--   平地（PLOT_TYPE_LAND）  elev =   5 + 180*u          →    5~185m（<200m 低地）
+--     其中沿海平地（IsCoastalLand）额外压到 ≤50m（海岸≈0）
+--   丘陵（PLOT_TYPE_HILLS）  elev = 120 + 360*u          →  120~480m（起伏带）
+--   山地（PLOT_TYPE_MOUNTAIN）elev = 1500 + 2000*u       → 1500~3500m（策划案山地带）
+--     主脊升级：u>0.92 或 ≥5 个邻格为山地（山体内部）→ elev = 3500 + 1000*u（>3500m）
+--   海洋                     elev = -25 - 5800*d^1.3    →  -25m（岸）~-5825m（深海沟）
+--     水深分级负值：海岸≈0、浅海 -200~-2000、深海 ≤-2000（策划案 1.2 分界）
+--
+--   参数选取理由：振幅全部对齐策划案 1.2 阈值（200/500/3500/-200/-2000），
+--   使 8 形态分类直接落在阈值上；u 用 (h-thr)/thr 是因为陆侧分形高度典型区间
+--   为 [thr, 2*thr]，归一后覆盖 0~1；海洋幂 1.3 让大陆架（浅海）占比更宽、
+--   深海收缩到远洋，符合"浅海=大陆架"地理含义。
+--
+-- 形态层 8 类（策划案 1.2，判定完备无空档；RR_ClassifyForm 实现）：
+--   水：邻陆 → 海岸/水面（与大河可航行段共用的形态，M2 复用此格）；
+--       否则 elev ≤ -2000 → 深海；-2000 < elev < -200 → 浅海。
+--   陆：elev > 3500 → 主脊；500~3500 → 山地；200~500 → 山麓；
+--       <200 且邻格最大高差 ≥50m → 隆起（岗地/丘陵）；否则 → 低地。
+-------------------------------------------------------------------------------
+
+function RR_CountMountainNeighbors(x, y)
+	-- 理由（T2 主脊判定）：统计 6 邻格中 PLOT_TYPE_MOUNTAIN 的数量，
+	-- 山体内部的格子升级为主脊（>3500m），山脉边缘保持 1500~3500m 山地。
+	local count = 0;
+	for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+		local pAdj = Map.GetAdjacentPlot(x, y, dir);
+		if pAdj ~= nil and pAdj:GetPlotType() == g_PLOT_TYPE_MOUNTAIN then
+			count = count + 1;
+		end
+	end
+	return count;
+end
+
+function RR_HasAdjacentLand(x, y)
+	-- 理由（T2 海岸/水面判定）：水格任一邻格为陆地即归"海岸/水面"。
+	for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+		local pAdj = Map.GetAdjacentPlot(x, y, dir);
+		if pAdj ~= nil and not pAdj:IsWater() then
+			return true;
+		end
+	end
+	return false;
+end
+
+function RR_MaxNeighborElevDiff(x, y)
+	-- 理由（T2 隆起判定）：策划案 1.2"邻格高差≥50m"。只统计陆地邻格
+	-- （水侧高差无地形意义）；邻格海拔尚未全表算出时跳过该邻格。
+	local pPlot = Map.GetPlot(x, y);
+	local selfElev = g_RR_elevation[y * g_iW + x + 1];
+	local maxDiff = 0;
+	for dir = 0, DirectionTypes.NUM_DIRECTION_TYPES - 1 do
+		local pAdj = Map.GetAdjacentPlot(x, y, dir);
+		if pAdj ~= nil and not pAdj:IsWater() then
+			local adjElev = g_RR_elevation[pAdj:GetY() * g_iW + pAdj:GetX() + 1];
+			if adjElev ~= nil and selfElev ~= nil then
+				local diff = math.abs(adjElev - selfElev);
+				if diff > maxDiff then
+					maxDiff = diff;
+				end
+			end
+		end
+	end
+	return maxDiff;
+end
+
+function RR_ClassifyForm(elev, isWater, hasAdjacentLand, maxNeighborDiff)
+	-- 理由（T2/T3）：策划案 1.2 形态层 8 类的完整判定。返回字符串键，
+	-- 与 RR_PrintFormStats 的统计表一一对应。
+	if isWater then
+		if hasAdjacentLand then
+			return "海岸/水面";
+		elseif elev <= -2000 then
+			return "深海";
+		else
+			return "浅海";
+		end
+	end
+	if elev > 3500 then
+		return "主脊";
+	elseif elev >= 500 then
+		return "山地";
+	elseif elev >= 200 then
+		return "山麓";
+	elseif maxNeighborDiff >= 50 then
+		return "隆起";
+	else
+		return "低地";
+	end
+end
+
+function RR_BuildElevationAndForms()
+	-- 理由（T2）：插入点见 GenerateMap 注释（地形定稿后、河流前）。
+	-- 全程无随机数消耗（确定性论证见本块头部）。
+	if g_continentsFrac == nil or g_RR_waterThreshold == nil or g_RR_waterThreshold <= 0 then
+		-- 理由：防御——阈值捕获失败时跳过海拔场（如未来从其他入口调用），
+		-- 绝不允许海拔场反过来弄崩地图生成。
+		print("[RRMap M1] WARNING: 海拔场跳过——分形阈值未捕获");
+		return;
+	end
+
+	local thr = g_RR_waterThreshold;
+	g_RR_elevation = {};
+	g_RR_form = {};
+
+	-- 第一遍：海拔。海洋与陆地分别用 d / u 归一化（公式见本块头部注释）。
+	for y = 0, g_iH - 1 do
+		for x = 0, g_iW - 1 do
+			local i = y * g_iW + x + 1; -- Lua 1-based
+			local pPlot = Map.GetPlot(x, y);
+			local h = g_continentsFrac:GetHeight(x, y);
+			local elev = 0;
+			if pPlot:IsWater() then
+				local d = (thr - h) / thr;
+				if d < 0 then d = 0; elseif d > 1 then d = 1; end
+				elev = -25 - 5800 * (d ^ 1.3);
+			else
+				local u = (h - thr) / thr;
+				if u < 0 then u = 0; end
+				if u > 1 then u = 1; end
+				local plotType = pPlot:GetPlotType();
+				if plotType == g_PLOT_TYPE_MOUNTAIN then
+					if u > 0.92 or RR_CountMountainNeighbors(x, y) >= 5 then
+						elev = 3500 + 1000 * u; -- 主脊带
+					else
+						elev = 1500 + 2000 * u; -- 山地带
+					end
+				elseif plotType == g_PLOT_TYPE_HILLS then
+					elev = 120 + 360 * u;
+				else
+					elev = 5 + 180 * u;
+					if pPlot:IsCoastalLand() then
+						-- 海岸≈0：沿海平地压到 50m 以下
+						local cap = 30 + 20 * u;
+						if elev > cap then
+							elev = cap;
+						end
+					end
+				end
+			end
+			g_RR_elevation[i] = elev;
+		end
+	end
+
+	-- 第二遍：形态。需要全表海拔（邻格高差），故分两遍。
+	local formCounts = {};
+	for y = 0, g_iH - 1 do
+		for x = 0, g_iW - 1 do
+			local i = y * g_iW + x + 1;
+			local pPlot = Map.GetPlot(x, y);
+			local isWater = pPlot:IsWater();
+			local hasLand = false;
+			local maxDiff = 0;
+			if isWater then
+				hasLand = RR_HasAdjacentLand(x, y);
+			else
+				maxDiff = RR_MaxNeighborElevDiff(x, y);
+			end
+			local form = RR_ClassifyForm(g_RR_elevation[i], isWater, hasLand, maxDiff);
+			g_RR_form[i] = form;
+			formCounts[form] = (formCounts[form] or 0) + 1;
+		end
+	end
+
+	-- 理由（T2）：形态分布一次性打印，tuner 日志里可立即核对 8 类是否完备无空档。
+	print("[RRMap M1] 形态分布: " .. RR_FormCountsToString(formCounts));
+end
+
+function RR_FormCountsToString(formCounts)
+	-- 理由：统计表序列化，供探针打印；tostring 防 nil。
+	local parts = {};
+	local order = {"深海", "浅海", "海岸/水面", "低地", "隆起", "山麓", "山地", "主脊"};
+	for _, form in ipairs(order) do
+		table.insert(parts, form .. "=" .. tostring(formCounts[form] or 0));
+	end
+	return table.concat(parts, " ");
+end
+
+function RR_PrintFormStats()
+	-- 理由（T3）：完成探针后打印山麓带改动后的最终形态分布，
+	-- 与 Build 阶段的分布对比即可看出山麓带吞并了多少低地（调参数据源）。
+	if g_RR_form == nil then
+		return;
+	end
+	local formCounts = {};
+	for i = 1, g_iW * g_iH do
+		local form = g_RR_form[i];
+		if form ~= nil then
+			formCounts[form] = (formCounts[form] or 0) + 1;
+		end
+	end
+	print("[RRMap M1] 形态分布(山麓落地后): " .. RR_FormCountsToString(formCounts));
+end
+
+function RR_ApplyFoothills()
+	-- 理由（T3 最小可见改动）：把策划案"山麓带"落到原版枚举上——与山地相邻的
+	-- 原版平地（PLOT_TYPE_LAND）强制改为丘陵，使 主脊(>3500m)→山麓→低地 的
+	-- 过渡带在游戏中肉眼可见。只动这一步：不改分形、不改山地本体、不重构流程。
+	-- 写法照官方 Tilted_Axis.lua L524 先例：plot:SetPlotType(g_PLOT_TYPE_HILLS,
+	-- false, true)（第三参=延迟区域重算），丘陵地形 = 原地形 + g_TERRAIN_BASE_TO_HILLS_DELTA
+	-- （MapEnums 定义，GRASS+1=GRASS_HILLS 等五对）。循环结束后统一
+	-- AreaBuilder.Recalculate()（官方注释同款做法）。
+	if g_RR_form == nil or g_RR_elevation == nil then
+		print("[RRMap M1] WARNING: 山麓带跳过——形态层未生成");
+		return;
+	end
+
+	local converted = 0;
+	for y = 0, g_iH - 1 do
+		for x = 0, g_iW - 1 do
+			local i = y * g_iW + x + 1;
+			if g_RR_form[i] == "低地" or g_RR_form[i] == "隆起" then
+				-- 理由（判定条件）：只收"原版平地"（丘陵本来就是丘陵，不动），
+				-- 且只看与山地相邻这一格——一格宽的山麓裙边，最小侵入。
+				local pPlot = Map.GetPlot(x, y);
+				if pPlot:GetPlotType() == g_PLOT_TYPE_LAND and RR_CountMountainNeighbors(x, y) > 0 then
+					pPlot:SetPlotType(g_PLOT_TYPE_HILLS, false, true);
+					if not pPlot:IsHills() then
+						-- 理由：IsHills() 在 SetPlotType 后应已为真；此分支防御
+						-- 引擎状态延迟，直接补写丘陵地形枚举（+DELTA 为官方惯用法）。
+						TerrainBuilder.SetTerrainType(pPlot, pPlot:GetTerrainType() + g_TERRAIN_BASE_TO_HILLS_DELTA);
+					end
+					-- 理由：海拔/形态表同步到丘陵带，保证后续打印与持久化一致。
+					g_RR_elevation[i] = 200 + (g_RR_elevation[i] or 0) * 0.5; -- 200~300m 山麓
+					g_RR_form[i] = "山麓";
+					converted = converted + 1;
+				end
+			end
+		end
+	end
+
+	-- 理由：批量改完统一重算区域（官方 Tilted_Axis 注释：与其反复重算，不如循环末尾一次），
+	-- 否则后续河流/特征/资源生成会读到脏 Area 缓存（调研 A 报告 4.5）。
+	AreaBuilder.Recalculate();
+	print(string.format("[RRMap M1] 山麓带: 平地改丘陵 %d 格", converted));
+end
+
+function RR_PersistElevation()
+	-- 理由（T2 双保险之一）：海拔表写入 MapConfiguration，键 RR_Elevation_N 分块
+	-- （每块 4096 格、约 20-30KB 字符串）+ RR_Elevation_Count 块数。
+	-- 诚实标注：MapConfiguration.SetValue 在建图上下文的存在性【无官方先例】
+	-- （调研 A 报告 4.2 只证实 GetValue；YnAMP 快照零使用），故全程 pcall——
+	-- 写不进去不致命，海拔是纯种子确定函数可由种子重算（双保险之二），
+	-- 写日志供 tuner 确认实际走了哪条路。
+	if g_RR_elevation == nil then
+		return;
+	end
+
+	local n = g_iW * g_iH;
+	local chunk = 4096;
+	local chunks = math.ceil(n / chunk);
+	local okCount = 0;
+	local totalBytes = 0;
+	for c = 1, chunks do
+		local lo = (c - 1) * chunk + 1;
+		local hi = math.min(c * chunk, n);
+		local parts = {};
+		for i = lo, hi do
+			parts[i - lo + 1] = tostring(math.floor((g_RR_elevation[i] or 0) + 0.5));
+		end
+		local s = table.concat(parts, ",");
+		local ok = pcall(function()
+			MapConfiguration.SetValue("RR_Elevation_" .. (c - 1), s);
+		end);
+		if ok then
+			okCount = okCount + 1;
+			totalBytes = totalBytes + string.len(s);
+		else
+			-- 理由：写失败只报一次级别信息，继续尝试其余块（可能仅单块超限）。
+			print(string.format("[RRMap M1] WARNING: RR_Elevation_%d 写入失败（SetValue 可能不可用）", c - 1));
+		end
+	end
+	local okMeta = pcall(function()
+		MapConfiguration.SetValue("RR_Elevation_Count", tostring(okCount));
+	end);
+	print(string.format("[RRMap M1] 海拔持久化: 成功 %d/%d 块, %d 字节, 元数据写入 %s",
+		okCount, chunks, totalBytes, tostring(okMeta)));
+
+	-- 理由：回读校验——若同上下文 GetValue 能取回首块，证明写通路真实存在。
+	local roundTrip = "未做";
+	if okCount > 0 then
+		local okRT, back = pcall(function()
+			return MapConfiguration.GetValue("RR_Elevation_0");
+		end);
+		if okRT then
+			if back ~= nil then
+				roundTrip = string.format("成功(首块%d字节)", string.len(back));
+			else
+				roundTrip = "失败(读回nil)";
+			end
+		else
+			roundTrip = "失败(pcall报错)";
+		end
+	end
+	print("[RRMap M1] 海拔持久化回读: " .. roundTrip);
+end
+
+function RR_PrintElevationSamples()
+	-- 理由（T2）：开局后 tuner 日志抽样核对——每 2000 格打印一格的海拔与形态，
+	-- 覆盖全图约 1/2000 的样点，足以核对量级（海岸≈0/低地<200/山地1500+）
+	-- 与海陆分界是否正确，而不刷屏。
+	if g_RR_elevation == nil then
+		return;
+	end
+	local n = g_iW * g_iH;
+	for y = 0, g_iH - 1 do
+		for x = 0, g_iW - 1 do
+			local i = y * g_iW + x + 1;
+			if i % 2000 == 1 then
+				print(string.format("[RRMap M1] elev sample %d,%d=%.0f (%s)",
+					x, y, g_RR_elevation[i], tostring(g_RR_form[i])));
+			end
+		end
+	end
 end
