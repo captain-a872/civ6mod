@@ -32,6 +32,15 @@
        试验 2（预备，若试验 1 实机仍棕）：把 RR_RIVER/RR_SHALLOW 的
        TerrainType Xref 改回 Shallows，并在本条注释记录结论"引擎对自定义
        Water 地形 3D 渲染不支持"（观感至少小地图/战略视图正确）。
+     M7 根因定论（2026-09-30，证据链全文见 docs/水面棕色3D-根因调查.md）：
+       引擎浅水 3D 路径（TerrainStyle CoastlineLayer：半透明浅水/岸线泡沫/
+       沙滩混合；渲染器编译期字段 Shallows/CoastlineLayer/ShallowsMtl 实证）
+       对 mod 合并进本文件的自定义地形条目不做解析——Xref 换 Ocean 无效
+       （该路径不读条目的 TerrainType Xref）、条目逐字段克隆无效（不读任何
+       字段）。深水路径无此限制：同文件、同 .dep、同一次注册的
+       TERRAIN_RR_DEEPSEA 3D 蓝色正常。棕色=无水面裸地，数据文件不可修复；
+       处置为两个替代方案（a 水面退回原版 COAST / b 保持现状），由所有者裁决，
+       本条目自此冻结不再试验性改动。
      ============================================================================ -->
 <AssetObjects..ArtDefSet>
 	<m_Version>

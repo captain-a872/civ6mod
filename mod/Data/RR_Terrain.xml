@@ -8,6 +8,10 @@
      注意：Water="true" 使海军可通行（单位移动域按 Water 属性判定）；
      刻意不复用 TERRAIN_COAST，否则沿海 modifier（港口/灯塔等）会错误地
      把大河当作海岸（Those reference TERRAIN_COAST explicitly）。
+     M7 根因定论：ShallowWater="true" 使本地形落入引擎浅水 3D 路径，该路径
+     不解析自定义地形 artdef 条目 → 3D 棕色（不可修复，证据链见
+     docs/水面棕色3D-根因调查.md）；处置待所有者裁决（方案 a 退回 COAST /
+     方案 b 保持现状），本文件暂不改动。
      ============================================================================ -->
 <GameData>
 	<Types>
