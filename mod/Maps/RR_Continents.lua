@@ -301,6 +301,30 @@ function GeneratePlotTypes(world_age)
 	return plotTypes;
 end
 
+-- 理由（M1-Tec 修复）：AddFeatures/AddFeaturesFromContinents 是原版 Continents.lua
+-- 在本文件内定义的全局函数（非 include 提供）。M1-Tec 重写误随分形管线一并删除，
+-- 而 GenerateMap 的调用点（AddFeatures/AddFeaturesFromContinents）仍在——恢复原版
+-- 定义逐字节等价（对照 28e7524 版与原版 Continents.lua）。
+function AddFeatures()
+	print("Adding Features");
+
+	-- Get Rainfall setting input by user.
+	local rainfall = MapConfiguration.GetValue("rainfall");
+	if rainfall == 4 then
+		rainfall = 1 + TerrainBuilder.GetRandomNumber(3, "Random Rainfall - Lua");
+	end
+
+	local args = {rainfall = rainfall}
+	featuregen = FeatureGenerator.Create(args);
+	featuregen:AddFeatures(true, true);  --second parameter is whether or not rivers start inland);
+end
+
+function AddFeaturesFromContinents()
+	print("Adding Features from Continents");
+
+	featuregen:AddFeaturesFromContinents();
+end
+
 function RR_CountMountainNeighbors(x, y)
 	-- 理由（T2 主脊判定）：统计 6 邻格中 PLOT_TYPE_MOUNTAIN 的数量，
 	-- 山体内部的格子升级为主脊（>RR_FORM_RIDGE_MIN_ELEV），山脉边缘保持
