@@ -19,6 +19,19 @@
      （Flat/Hill/Mountain/Ocean Xref 的 14 矩阵地形与深海均正常），失效点
      收敛到引擎浅水 3D 路径（TerrainStyle StandardCoastline 层/海岸线
      网格，已知对 TERRAIN_COAST 有引擎级特判），非条目字段问题。
+     M5 试验结果（用户实机）：TerrainType Xref Shallows→Ocean 后 3D 仍棕，
+     排除 TerrainType Xref 嫌疑。
+     M6 排查试验（独立可回退，逐项 git 回滚）：
+       试验 1（本条）：结构化 diff（块层级：子集合清单+元素名+字段名集合）
+       对照原版 Base COAST/OCEAN——结论：三条目无缺失/多出块，结构完全一致；
+       正常深海与棕色浅水的剩余差异只剩 Clutter（深海照壳为空，浅水/大河挂
+       CLUTTER_OCEAN 岸线装饰层）与 Audio/StrategicView 的 Ocean/Coast 之别，
+       故清空 RR_RIVER/RR_SHALLOW 的 Clutter 内容（保留空集合壳），并把 14 张
+       陆地矩阵地形卡的 Clutter 一并清空（性能观察项：不借原版草丛/岩石杂物
+       渲染，只借壳贴图）。三条目 Lighting 值本就一致（26/55/82），无需再对齐。
+       试验 2（预备，若试验 1 实机仍棕）：把 RR_RIVER/RR_SHALLOW 的
+       TerrainType Xref 改回 Shallows，并在本条注释记录结论"引擎对自定义
+       Water 地形 3D 渲染不支持"（观感至少小地图/战略视图正确）。
      ============================================================================ -->
 <AssetObjects..ArtDefSet>
 	<m_Version>
@@ -76,38 +89,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_GRASSLAND" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -218,38 +203,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_GRASSLAND_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -360,38 +317,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_GRASSLAND_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -502,38 +431,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_PLAINS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -644,38 +545,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_GRASSLAND_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -786,38 +659,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_GRASSLAND_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -928,38 +773,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_DESERT" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -1070,38 +887,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_DESERT_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -1212,38 +1001,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_DESERT_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -1354,38 +1115,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_TUNDRA" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -1509,38 +1242,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_SNOW_TUNDRA_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -1664,38 +1369,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_SNOW_TUNDRA_HILLS" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -1819,38 +1496,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_MOUNTAIN" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -1961,38 +1610,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_MOUNTAIN" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -2116,38 +1737,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_OCEAN" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />
@@ -2372,38 +1965,10 @@
 							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 						</Element>
 					</Element>
+					<!-- 理由（M6 排查试验）：清空 Clutter 内容（保留空集合壳，照深海条目与原版 OCEAN 先例）——水卡排除 CLUTTER_OCEAN 岸线装饰层的棕色嫌疑；陆卡为性能观察项（不借原版草丛/岩石杂物渲染，只借壳贴图）。独立可回退（git 单条回滚）。 -->
 					<Element>
 						<m_CollectionName text="Clutter" />
 						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
-						<Element>
-							<m_Fields>
-								<m_Values>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="CLUTTER_OCEAN" />
-										<m_ParamName text="XrefName" />
-									</Element>
-									<Element class="AssetObjects..ArtDefReferenceValue">
-										<m_ElementName text="" />
-										<m_RootCollectionName text="" />
-										<m_ArtDefPath text="Clutter.artdef" />
-										<m_CollectionIsLocked>true</m_CollectionIsLocked>
-										<m_TemplateName text="" />
-										<m_ParamName text="Xref" />
-									</Element>
-									<Element class="AssetObjects..StringValue">
-										<m_Value text="" />
-										<m_ParamName text="SelectionRule" />
-									</Element>
-									<Element class="AssetObjects..IntValue">
-										<m_nValue>0</m_nValue>
-										<m_ParamName text="SelectionPriority" />
-									</Element>
-								</m_Values>
-							</m_Fields>
-							<m_ChildCollections />
-							<m_Name text="Clutter001" />
-							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
-						</Element>
 					</Element>
 					<Element>
 						<m_CollectionName text="Lighting" />

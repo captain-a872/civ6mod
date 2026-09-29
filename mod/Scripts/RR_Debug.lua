@@ -7,8 +7,13 @@
 --	  事件挂钩照 AlexanderScenario 的 Events.TurnBegin + 首回合判定。
 --	注意：RevealAllPlots 只解除战争迷雾（全图变为"已探索"），单位视野
 --	  照常工作；与 IGE 全图揭示同款副作用——立即触发全部自然奇观发现。
+--	M6 性能整改：全图探索 9360~18144 格同时渲染，开局风扇即响（未过回合）。
+--	  改为默认关闭——仅当本文件内开关 RR_DEBUG_REVEAL_ALL 手动置 true 才探索。
+--	  不用 MapConfiguration 做运行时开关：建图期 SetValue 在本环境必失败
+--	  （RR_PersistElevation M2 首测实证 0/5 块），GameplayScript 上下文
+--	  同样无可靠读写通路，故保留文件内布尔开关（改后需重启游戏生效）。
 ------------------------------------------------------------------------------
-local RR_DEBUG_REVEAL_ALL = true;	-- 调试开关：发布前置 false 或整文件移除
+local RR_DEBUG_REVEAL_ALL = false;	-- M6：默认 false（性能）。需要全图目验时手动改 true 并重启游戏
 
 local g_RR_RevealDone = false;
 

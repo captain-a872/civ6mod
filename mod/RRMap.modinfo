@@ -50,6 +50,7 @@
 			<File>Text/RR_Text.xml</File>
 		</UpdateText>
 		<!-- 调试工具（非发布内容）：开局全图探索，见 Scripts/RR_Debug.lua 头注释。
+		     M6 起开关默认关闭（性能），脚本加载但不做全图揭示。
 		     动作类型照官方 AlexanderScenario.modinfo L59 的 AddGameplayScripts
 		     （M2 首测教训：误写 UpdateScripts 不是合法游戏内动作，脚本被静默跳过） -->
 		<AddGameplayScripts id="RR_DEBUG_SCRIPT">
