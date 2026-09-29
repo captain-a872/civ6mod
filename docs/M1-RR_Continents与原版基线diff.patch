@@ -1,5 +1,5 @@
 --- /tmp/rrmap_m1/Continents_baseline.lua	2026-09-28 22:34:07
-+++ mod/Maps/RR_Continents.lua	2026-09-29 12:16:54
++++ mod/Maps/RR_Continents.lua	2026-09-29 21:09:34
 @@ -1,4 +1,20 @@
  ------------------------------------------------------------------------------
 +-- 文件:    RR_Continents.lua
@@ -21,7 +21,7 @@
  --	FILE:	 Continents.lua
  --	AUTHOR:  
  --	PURPOSE: Base game script - Produces widely varied continents.
-@@ -25,6 +41,58 @@
+@@ -25,6 +41,68 @@
  local world_age_normal = 3;
  local world_age_old = 2;
  
@@ -34,6 +34,16 @@
 +local g_RR_waterThreshold = nil;	-- 最终分形海平面阈值（分形高度单位），GeneratePlotTypes 捕获
 +local g_RR_elevation = nil;			-- 海拔表：[y*g_iW+x+1] = 米（Lua 1-based），T2 生成
 +local g_RR_form = nil;				-- 形态表：[y*g_iW+x+1] = 形态名（策划案 1.2 的 8 类），T2/T3 生成
++
++-- RR M6 海洋分级阈值（实测调参）：
++-- 理由：旧值 深海≤-2000 / 浅海 -2000~-200（策划案 1.2 原始分界）在 168×108
++-- 实图上导致海岸+浅海占比过大、深海隔不开大陆（用户实测反馈）。新值把深海
++-- 分界抬到 -800、浅海上限收到 -100——大陆之间呈深蓝，近岸只留一小圈浅色。
++-- 海拔公式振幅（-25~-5825m）未动，只改分类阈值；陆侧阈值（200/500/3500）不变。
++-- 诚实标注：本地无法实机验证比例，新图请以 "[RRMap M1] 海洋分级阈值" 与
++-- "形态分布" 两条探针 + 3D 观感复核；不满意只改这两个常量即可。
++local RR_SEA_DEEP_ELEV = -800;			-- 深海分界（旧值 -2000）
++local RR_SEA_SHALLOW_MAX_ELEV = -100;	-- 浅海上限（旧值 -200）；>-100 的离岸浅水归海岸观感
 +
 +-- RR M2 水文分级：参数与状态。
 +-- 理由（取值）：168×108（1:4 精细度）下的初始梯度，策划案 2.3"数值为默认倾向，
@@ -80,7 +90,7 @@
  -------------------------------------------------------------------------------
  function GenerateMap()
  	print("Generating Continents Map");
-@@ -33,6 +101,10 @@
+@@ -33,6 +111,10 @@
  	-- Set globals
  	g_iW, g_iH = Map.GetGridSize();
  	g_iFlags = TerrainBuilder.GetFractalFlags();
@@ -91,7 +101,7 @@
  	local temperature = MapConfiguration.GetValue("temperature"); -- Default setting is Temperate.
  	if temperature == 4 then
  		temperature  =  1 + TerrainBuilder.GetRandomNumber(3, "Random Temperature- Lua");
-@@ -51,6 +123,8 @@
+@@ -51,6 +133,8 @@
  	end
  
  	plotTypes = GeneratePlotTypes(world_age);
@@ -100,12 +110,12 @@
  	terrainTypes = GenerateTerrainTypes(plotTypes, g_iW, g_iH, g_iFlags, false, temperature);
  	ApplyBaseTerrain(plotTypes, terrainTypes, g_iW, g_iH);
  
-@@ -64,27 +138,80 @@
+@@ -64,27 +148,80 @@
  	AddTerrainFromContinents(plotTypes, terrainTypes, world_age, g_iW, g_iH, iContinentBoundaryPlots);
  
  	AreaBuilder.Recalculate();
 +	rrStageClock = RR_Probe("地形", rrStageClock);
-+
+ 
 +	-- RR M1 T2/T3：海拔场 + 形态层 + 山麓带。
 +	-- 理由（插入点）：此时 plot 类型与地形均已定稿（AddTerrainFromContinents 之后），
 +	-- 且仍在 AddRivers 之前——满足原版不变量"河流发源于高地，丘陵/山地布局须在
@@ -116,7 +126,7 @@
 +	RR_PersistElevation();
 +	RR_PrintElevationSamples();
 +	rrStageClock = RR_Probe("海拔/形态层", rrStageClock);
- 
++
  	-- River generation is affected by plot types, originating from highlands and preferring to traverse lowlands.
  	AddRivers();
 +	rrStageClock = RR_Probe("河流", rrStageClock);
@@ -183,7 +193,7 @@
  	
  	resourcesConfig = MapConfiguration.GetValue("resources");
  	local startConfig = MapConfiguration.GetValue("start");-- Get the start config
-@@ -93,6 +220,7 @@
+@@ -93,6 +230,7 @@
  		START_CONFIG = startConfig,
  	};
  	local resGen = ResourceGenerator.Create(args);
@@ -191,7 +201,7 @@
  
  	print("Creating start plot database.");
  	
-@@ -106,8 +234,13 @@
+@@ -106,8 +244,13 @@
  		START_CONFIG = startConfig,
  	};
  	local start_plot_database = AssignStartingPlots.Create(args)
@@ -205,7 +215,7 @@
  end
  
  -------------------------------------------------------------------------------
-@@ -140,6 +273,9 @@
+@@ -140,6 +283,9 @@
  	else
  		water_percent = TerrainBuilder.GetRandomNumber(sea_level_high - sea_level_low, "Random Sea Level - Lua") + sea_level_low  + 1;
  	end
@@ -215,7 +225,7 @@
  
  	-- Set values for hills and mountains according to World Age chosen by user.
  	local adjustment = world_age;
-@@ -244,6 +380,10 @@
+@@ -244,6 +390,10 @@
  		-- print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
  		-- print(".");
  	end
@@ -226,7 +236,7 @@
  	
  	local args = {};
  	args.world_age = world_age;
-@@ -664,4 +804,1095 @@
+@@ -664,4 +814,1116 @@
  	end
  
  
@@ -257,16 +267,20 @@
 +--   山地（PLOT_TYPE_MOUNTAIN）elev = 1500 + 2000*u       → 1500~3500m（策划案山地带）
 +--     主脊升级：u>0.92 或 ≥5 个邻格为山地（山体内部）→ elev = 3500 + 1000*u（>3500m）
 +--   海洋                     elev = -25 - 5800*d^1.3    →  -25m（岸）~-5825m（深海沟）
-+--     水深分级负值：海岸≈0、浅海 -200~-2000、深海 ≤-2000（策划案 1.2 分界）
++--     水深分级负值（M6 实测调参后）：海岸≈0、浅海 -800~-100、深海 ≤-800
++--     （旧分界：浅海 -2000~-200、深海 ≤-2000——浅海带过宽，见常量区注释）
 +--
-+--   参数选取理由：振幅全部对齐策划案 1.2 阈值（200/500/3500/-200/-2000），
-+--   使 8 形态分类直接落在阈值上；u 用 (h-thr)/thr 是因为陆侧分形高度典型区间
-+--   为 [thr, 2*thr]，归一后覆盖 0~1；海洋幂 1.3 让大陆架（浅海）占比更宽、
-+--   深海收缩到远洋，符合"浅海=大陆架"地理含义。
++--   参数选取理由：振幅对齐策划案 1.2 陆侧阈值（200/500/3500）；海洋分级阈值
++--   自策划案值（-200/-2000）调整为 -100/-800（M6 实测比例失衡调参，理由见
++--   常量区注释），公式幂 1.3 不变。u 用 (h-thr)/thr 是因为陆侧分形高度典型
++--   区间为 [thr, 2*thr]，归一后覆盖 0~1；海洋幂 1.3 让浅段（大陆架）过渡
++--   更缓——分级观感现由分类阈值主导，幂值不再肩负重任。
 +--
-+-- 形态层 8 类（策划案 1.2，判定完备无空档；RR_ClassifyForm 实现）：
++-- 形态层 8 类（判定完备无空档；RR_ClassifyForm 实现）：
 +--   水：邻陆 → 海岸/水面（与大河可航行段共用的形态，M2 复用此格）；
-+--       否则 elev ≤ -2000 → 深海；-2000 < elev < -200 → 浅海。
++--       否则 elev ≤ -800 → 深海；-800 < elev ≤ -100 → 浅海；
++--       elev > -100（离岸极浅水）→ 海岸/水面观感（M6：不建卡，保持原版
++--       COAST 壳，构成"近岸一小圈浅色"）。
 +--   陆：elev > 3500 → 主脊；500~3500 → 山地；200~500 → 山麓；
 +--       <200 且邻格最大高差 ≥50m → 隆起（岗地/丘陵）；否则 → 低地。
 +-------------------------------------------------------------------------------
@@ -326,10 +340,15 @@
 +	if isWater then
 +		if hasAdjacentLand then
 +			return "海岸/水面";
-+		elseif elev <= -2000 then
++		elseif elev <= RR_SEA_DEEP_ELEV then
 +			return "深海";
-+		else
++		elseif elev <= RR_SEA_SHALLOW_MAX_ELEV then
 +			return "浅海";
++		else
++			-- 理由（M6 浅海上限落地）：>-100m 的离岸极浅水（不邻陆）归入
++			-- 海岸观感——不建具名卡（RR_ApplyTerrainMatrix 无此形态分支，
++			-- 保持原版 COAST 壳），正好构成"近岸一小圈浅色"的目标观感。
++			return "海岸/水面";
 +		end
 +	end
 +	if elev > 3500 then
@@ -421,6 +440,10 @@
 +	end
 +
 +	-- 理由（T2）：形态分布一次性打印，tuner 日志里可立即核对 8 类是否完备无空档。
++	-- 理由（M6）：分级阈值随分布一并打印——本地无法实机验证海洋比例，
++	-- 新图以本条 + 下条的形态分布复核深海/浅海占比是否显著上升。
++	print(string.format("[RRMap M1] 海洋分级阈值: 深海≤%dm, 浅海≤%dm（M6 实测调参，旧值 -2000/-200）",
++		RR_SEA_DEEP_ELEV, RR_SEA_SHALLOW_MAX_ELEV));
 +	print("[RRMap M1] 形态分布: " .. RR_FormCountsToString(formCounts));
 +end
 +
@@ -679,7 +702,7 @@
 +	-- （海湾/大河水面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
 +	local riverTerrainType0 = g_TERRAIN_TYPE_COAST;
 +	local okRT0, rtIdx0 = pcall(function()
-+		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
++		return GetGameInfoIndex("Terrains", "TERRAIN_COAST");
 +	end);
 +	if okRT0 and rtIdx0 ~= nil and rtIdx0 >= 0 then
 +		riverTerrainType0 = rtIdx0;
@@ -930,7 +953,7 @@
 +	-- 水面功能不受影响，仅描述退回"海岸"。
 +	local riverTerrainType = g_TERRAIN_TYPE_COAST;
 +	local okRT, rtIdx = pcall(function()
-+		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
++		return GetGameInfoIndex("Terrains", "TERRAIN_COAST");
 +	end);
 +	if okRT and rtIdx ~= nil and rtIdx >= 0 then
 +		riverTerrainType = rtIdx;
@@ -1205,15 +1228,23 @@
 +		end
 +	end
 +
-+	-- 海洋三级具名化（策划案 1.2：深海 ≤-2000m / 浅海 -2000~-200m / 海岸·水面≈0m）。
++	-- 海洋三级具名化（M6 实测调参后：深海 ≤-800m / 浅海 -800~-100m / 海岸·水面≈0m；
++	-- 旧分界 -2000/-200 见常量区注释）。
 +	-- 水形态度卡表：形态 → {具名水卡名, 壳地形名}。壳名仅作解析失败回落的对照。
++	-- M7 根因定论：浅水具名卡（RR_SHALLOW）3D 棕色为引擎浅水路径不解析自定义
++	-- 地形条目（证据链 docs/水面棕色3D-根因调查.md）；若所有者裁决走替代方案 a，
++	-- 本行改为 {"TERRAIN_COAST", "TERRAIN_COAST"} 即恢复 3D 蓝色。深海卡
++	-- （RR_DEEPSEA）不受此限，保留具名。
 +	-- 理由（回落语义）：具名卡解析失败(-1)时回落写壳地形——深海回落 OCEAN 对该格
 +	-- 是恒等写（现状即 OCEAN，零损失）；浅海回落 COAST 会把该格升级为浅水
 +	-- （ShallowWater/Appeal 列随壳变化），仅在数据库注册整体失败时发生（届时陆地
 +	-- 具名卡同样缺失），属降级可玩性兜底而非常态路径。
++		-- 理由（M7 引擎限制，见 docs/水面棕色3D-根因调查.md）：浅水 3D 路径不解析
++		-- Mod 自定义地形（棕），浅海/大河水面放弃具名直落原版 COAST 保蓝色；
++		-- 深海卡（RR_DEEPSEA）渲染正常保留具名。
 +	local waterMatrix = {
 +		["深海"] = {"TERRAIN_RR_DEEPSEA", "TERRAIN_OCEAN"},
-+		["浅海"] = {"TERRAIN_RR_SHALLOW", "TERRAIN_COAST"},
++		["浅海"] = {"TERRAIN_COAST", "TERRAIN_COAST"},
 +	};
 +	-- 预解析水卡 ID 与回落壳 ID（同陆地卡：循环内只做数组查表）。
 +	local waterMatrixId = {};

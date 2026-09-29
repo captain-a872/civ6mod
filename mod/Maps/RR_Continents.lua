@@ -1274,7 +1274,7 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 	-- （海湾/大河水面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
 	local riverTerrainType0 = g_TERRAIN_TYPE_COAST;
 	local okRT0, rtIdx0 = pcall(function()
-		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
+		return GetGameInfoIndex("Terrains", "TERRAIN_COAST");
 	end);
 	if okRT0 and rtIdx0 ~= nil and rtIdx0 >= 0 then
 		riverTerrainType0 = rtIdx0;
@@ -1525,7 +1525,7 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 	-- 水面功能不受影响，仅描述退回"海岸"。
 	local riverTerrainType = g_TERRAIN_TYPE_COAST;
 	local okRT, rtIdx = pcall(function()
-		return GetGameInfoIndex("Terrains", "TERRAIN_RR_RIVER");
+		return GetGameInfoIndex("Terrains", "TERRAIN_COAST");
 	end);
 	if okRT and rtIdx ~= nil and rtIdx >= 0 then
 		riverTerrainType = rtIdx;
@@ -1811,9 +1811,12 @@ function RR_ApplyTerrainMatrix()
 	-- 是恒等写（现状即 OCEAN，零损失）；浅海回落 COAST 会把该格升级为浅水
 	-- （ShallowWater/Appeal 列随壳变化），仅在数据库注册整体失败时发生（届时陆地
 	-- 具名卡同样缺失），属降级可玩性兜底而非常态路径。
+		-- 理由（M7 引擎限制，见 docs/水面棕色3D-根因调查.md）：浅水 3D 路径不解析
+		-- Mod 自定义地形（棕），浅海/大河水面放弃具名直落原版 COAST 保蓝色；
+		-- 深海卡（RR_DEEPSEA）渲染正常保留具名。
 	local waterMatrix = {
 		["深海"] = {"TERRAIN_RR_DEEPSEA", "TERRAIN_OCEAN"},
-		["浅海"] = {"TERRAIN_RR_SHALLOW", "TERRAIN_COAST"},
+		["浅海"] = {"TERRAIN_COAST", "TERRAIN_COAST"},
 	};
 	-- 预解析水卡 ID 与回落壳 ID（同陆地卡：循环内只做数组查表）。
 	local waterMatrixId = {};
