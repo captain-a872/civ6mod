@@ -2,7 +2,7 @@
 <!-- ============================================================================
      RRMap 自定义地形 ArtDef（借壳文件）。
      背景：Civ6 地形视觉由 .artdef 绑定而非数据库；M3 的 14 个矩阵地形卡
-     与 TERRAIN_RR_RIVER（M2 大河水面）无 ArtDef 条目，引擎全部回落草原贴图。
+     与 TERRAIN_RR_RIVER（M2 河面）无 ArtDef 条目，引擎全部回落草原贴图。
      海洋三级具名化追加 TERRAIN_RR_DEEPSEA（借 OCEAN 壳）与
      TERRAIN_RR_SHALLOW（借 COAST 壳）两条目，同此纪律。
      本文件从原版 Base/ArtDefs/Terrains.artdef 逐条目克隆，仅改条目名
@@ -1702,7 +1702,7 @@
 				<m_Name text="TERRAIN_RR_RIDGE" />
 				<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 			</Element>
-			<!-- 借壳映射：TERRAIN_RR_RIVER ← TERRAIN_COAST（大河水面→浅海/海岸贴图） -->
+			<!-- 借壳映射：TERRAIN_RR_RIVER ← TERRAIN_COAST（河面→浅海/海岸贴图） -->
 			<Element>
 				<m_Fields>
 					<m_Values />

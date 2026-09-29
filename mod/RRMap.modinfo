@@ -56,7 +56,7 @@
 		<AddGameplayScripts id="RR_DEBUG_SCRIPT">
 			<File>Scripts/RR_Debug.lua</File>
 		</AddGameplayScripts>
-		<!-- TERRAIN_RR_RIVER（大河水面）注册：独立动作，失败不影响网格尺寸注册 -->
+		<!-- TERRAIN_RR_RIVER（河面）注册：独立动作，失败不影响网格尺寸注册 -->
 		<UpdateDatabase id="RR_TERRAIN_DATA">
 			<File>Data/RR_Terrain.xml</File>
 		</UpdateDatabase>

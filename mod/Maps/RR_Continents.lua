@@ -8,7 +8,7 @@
 --            T2 确定性连续海拔场（米）→ MapConfiguration 分块持久化（双保险：纯种子可重算）
 --            T3 形态层 8 类分类 + 山麓带落地（邻山平地强制丘陵，照官方 Tilted_Axis 写法）
 --            T4 自定义 1:4 尺寸（MAPSIZE_RR_STD14，168×108）配套查询兜底
---            M2  水文分级：大河水面（TERRAIN_RR_RIVER）+ 急流/漫滩/三角洲标记
+--            M2  水文分级：河面（TERRAIN_RR_RIVER）+ 急流/漫滩/三角洲标记
 --            M2.5 Layer3 微地貌特征卡（三角洲/急流/漫滩 + 绿洲/沼泽原版直放）
 --            M3  形态×地带具名矩阵地形卡：RR_ApplyTerrainMatrix（14 卡，壳等价，
 --                惰性解析回落原版壳，见 Data/RR_Terrains_Matrix.xml）
@@ -1217,7 +1217,7 @@ end
 
 
 -------------------------------------------------------------------------------
--- RR M2：水文分级与大河水面
+-- RR M2：水文分级与河面
 -- 依据：
 --   陆改水机制 = AddLakes 先例（RiversLakes.lua L387 SetTerrainType(COAST)
 --                + AreaBuilder.Recalculate()）。
@@ -1271,7 +1271,7 @@ function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 	-- 第零遍：孤儿小湖回填（理由：AddLakes 随机撒湖与河网无关，出现"水点无河"
 	-- 的违和——M2 二测用户反馈；策划案轻量因果要求水系连通。与河相连的
 	-- 小湖保留（首测好评的景观）。判定：小湖=水格且所属 Area 格数 ≤8
-	-- （海湾/大河水面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
+	-- （海湾/河面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
 	local riverTerrainType0 = g_TERRAIN_TYPE_COAST;
 	local okRT0, rtIdx0 = pcall(function()
 		return GetGameInfoIndex("Terrains", "TERRAIN_COAST");
@@ -1683,7 +1683,7 @@ function RR_PlaceLayer3Features()
 			if pPlot:GetFeatureType() == g_FEATURE_NONE then
 				local t = pPlot:GetTerrainType();
 				if t == g_TERRAIN_TYPE_DESERT then
-					-- 绿洲：平地荒漠 且 邻河（小河边缘河或大河水面都算水源）
+					-- 绿洲：平地荒漠 且 邻河（小河边缘河或河面都算水源）
 					if pPlot:IsRiver() then
 						if tryPlace(pPlot, oasisId) then placedOasis = placedOasis + 1; end
 					else
@@ -1731,7 +1731,7 @@ end
 --       后续 AddCliffs 等只按陆/水大类读它，矩阵改动不跨陆水边界，安全；
 --   (d) 海洋三级具名化：深海/浅海形态 → TERRAIN_RR_DEEPSEA/RR_SHALLOW 具名水卡
 --       （壳等价：分别借 TERRAIN_OCEAN/TERRAIN_COAST 壳）；"海岸/水面"形态保持
---       原版 COAST 不建卡，大河水面 TERRAIN_RR_RIVER 由 RR_ClassifyAndConvertRivers
+--       原版 COAST 不建卡，河面 TERRAIN_RR_RIVER 由 RR_ClassifyAndConvertRivers
 --       另行处理，两者互不动。
 -------------------------------------------------------------------------------
 

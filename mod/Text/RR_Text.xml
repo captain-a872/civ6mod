@@ -53,12 +53,12 @@
 			<Text>地大物博真实地理比例尺·性能档。120×78 格——每格精细度与 168×108 完全一致，只缩地图幅面，回合更快。</Text>
 		</Row>
 
-		<!-- M2 大河水面地形名（TERRAIN_RR_RIVER 的 Name 指向本键） -->
+		<!-- M2 河面地形名（TERRAIN_RR_RIVER 的 Name 指向本键） -->
 		<Row Tag="LOC_TERRAIN_RR_RIVER_NAME" Language="en_US">
 			<Text>Great River</Text>
 		</Row>
 		<Row Tag="LOC_TERRAIN_RR_RIVER_NAME" Language="zh_Hans_CN">
-			<Text>大河水面</Text>
+			<Text>河面</Text>
 		</Row>
 
 		<!-- M3 形态×地带具名矩阵地形卡名（TERRAIN_RR_* 矩阵 14 行的 Name 指向本组键） -->
