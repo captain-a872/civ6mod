@@ -12,6 +12,10 @@
 --            M2.5 Layer3 微地貌特征卡（三角洲/急流/漫滩 + 绿洲/沼泽原版直放）
 --            M3  形态×地带具名矩阵地形卡：RR_ApplyTerrainMatrix（14 卡，壳等价，
 --                惰性解析回落原版壳，见 Data/RR_Terrains_Matrix.xml）
+--            M1-Tec 板块地壳生成地基（M1 补完，2026-09-29）：原版分形海陆完全
+--                旁路，RR_Tectonics_GeneratePlots 取代 GeneratePlotTypes 内部分形
+--                管线（设计/取舍见 docs/M1-板块地壳生成-设计.md；新增文件
+--                mod/Maps/RR_Tectonics.lua，include 于下方）
 --          原版版权: Copyright (c) 2014 Firaxis Games, Inc. All rights reserved.
 ------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
@@ -32,24 +36,23 @@ include "NaturalWonderGenerator"
 include "ResourceGenerator"
 include "CoastalLowlands"
 include "AssignStartingPlots"
+-- 理由（M1-Tec）：板块地壳生成地基。include 位置在 MapEnums 之后——
+-- RR_Tectonics 消费 g_PLOT_TYPE_* / g_TERRAIN_TYPE_* 等全局枚举。
+include "RR_Tectonics"
 
 local g_iW, g_iH;
 local g_iFlags = {};
-local g_continentsFrac = nil;
 local featureGen = nil;
 local world_age_new = 5;
 local world_age_normal = 3;
 local world_age_old = 2;
 
--- RR M1 T2：海拔场所需的捕获量。
--- 理由：海平面阈值 water_percent / 分形阈值 iWaterThreshold 在 GeneratePlotTypes
--- 内部算出（局部变量），海拔场需要复用同一阈值才能与海陆结果严格一致；在此处
--- 捕获不消耗任何随机数流（避免扰动原版生成结果的可复现性——调研 A 报告 4.5：
--- 改动随机调用顺序会破坏同种子复现）。
-local g_RR_waterPercent = nil;		-- 海平面百分比（1-100），GeneratePlotTypes 捕获
-local g_RR_waterThreshold = nil;	-- 最终分形海平面阈值（分形高度单位），GeneratePlotTypes 捕获
-local g_RR_elevation = nil;			-- 海拔表：[y*g_iW+x+1] = 米（Lua 1-based），T2 生成
-local g_RR_form = nil;				-- 形态表：[y*g_iW+x+1] = 形态名（策划案 1.2 的 8 类），T2/T3 生成
+-- RR M1-Tec：跨文件全局契约（RR_Tectonics.lua 生成，本文件及下游消费）。
+-- 理由：由 local 提升为全局——板块生成在新文件中实现，两文件共享同一
+-- Lua 状态；字段约定（1-based 表 / 米 / 8 类形态名）与 M1~M8 逐字段一致，
+-- 下游已验收逻辑零改动（设计文档 §6.1）。
+g_RR_elevation = nil;			-- 海拔表：[y*g_iW+x+1] = 米（Lua 1-based），M1-Tec 板块派生
+g_RR_form = nil;				-- 形态表：[y*g_iW+x+1] = 形态名（策划案 1.2 的 8 类），M1-Tec 板块派生
 
 -- RR M6 海洋分级阈值（实测调参）：
 -- 理由：旧值 深海≤-2000 / 浅海 -2000~-200（策划案 1.2 原始分界）在 168×108
@@ -63,18 +66,19 @@ local g_RR_form = nil;				-- 形态表：[y*g_iW+x+1] = 形态名（策划案 1.
 local RR_SEA_DEEP_ELEV = -800;			-- 深海分界（旧值 -2000）
 local RR_SEA_SHALLOW_MAX_ELEV = -100;	-- 浅海上限（旧值 -200）；>-100 的离岸浅水归海岸观感
 
--- RR M8 陆侧形态分界（用户实测调参：山河占绝大部分陆地、平原几乎消失）：
+-- RR M8 陆侧形态分界（用户实测调参：山河占绝大部分陆地、平原几乎消失；
+-- M1-Tec 注：该实测的根因是"山由分形撒点决定"，M1-Tec 起山脉严格沿消亡
+-- 边界成链，本组阈值继续作为 RR_ClassifyForm 的分类线，山体占比由
+-- RR_Tectonics 的边界密度直接控制，见 docs/M1-板块地壳生成-设计.md §5.2）：
 -- 理由（山地门槛 500→700）：山麓带（200~山地门槛）随之加宽一档，山体
 -- 边缘更多格子落入山麓/隆起过渡，山体观感收窄；
 -- 理由（主脊门槛 3500→2800）：雪线观感由 RR_ApplySnowRidge 换肤保证
 -- （主脊形态→雪顶皮肤），门槛下移只让雪核略增、山体高程带收窄，不取消
--- 雪线。海拔振幅同步压低约 25%（见 RR_BuildElevationAndForms 公式注释），
--- 压低邻格高差 → 判定"隆起"（邻格高差≥50m）的格子减少、低地增多。
--- 目标配比（以 "[RRMap M1] 形态分布" 探针复核）：低地+隆起 ≥ 陆地 60%，
--- 山地+主脊 ≤ 陆地 15%。
--- 诚实标注：山地/主脊占比的上限由分形山地地块数决定（plot type 在
--- GeneratePlotTypes 已定稿），本组参数主要收窄山体高程带、加宽低地带，
--- 若探针仍超标，下一步须动分形山地密度（world_age/tectonics 参数）。
+-- 雪线。
+-- 目标配比（以 "[RRMap M1-Tec] 形态分布" 探针复核）：低地+隆起 ≥ 陆地 70%
+--（M1-Tec 新目标，旧 M8 目标 60%；山地+主脊 ≤ 陆地 15%）。
+-- 诚实标注：本地无法实机验证比例，新图以形态分布/低地指标两条探针 +
+-- 3D 观感复核；不满意先调 RR_Tectonics.lua 参数区（设计文档 §8 对照表）。
 local RR_FORM_MOUNTAIN_MIN_ELEV = 700;	-- 山地门槛（旧值 500）
 local RR_FORM_RIDGE_MIN_ELEV = 2800;	-- 主脊门槛（旧值 3500；雪线观感不变）
 
@@ -164,8 +168,8 @@ function GenerateMap()
 	end
 
 	plotTypes = GeneratePlotTypes(world_age);
-	-- 理由（T1）：分形海陆阶段探针（含 ApplyTectonics/孤立山在内的全部 plot 类型定稿）。
-	rrStageClock = RR_Probe("分形海陆", rrStageClock);
+	-- 理由（T1）：板块地基阶段探针（含 RR_Tectonics 全部十遍，plot 类型定稿）。
+	rrStageClock = RR_Probe("板块地基", rrStageClock);
 	terrainTypes = GenerateTerrainTypes(plotTypes, g_iW, g_iH, g_iFlags, false, temperature);
 	ApplyBaseTerrain(plotTypes, terrainTypes, g_iW, g_iH);
 
@@ -173,19 +177,17 @@ function GenerateMap()
 	TerrainBuilder.AnalyzeChokepoints();
 	TerrainBuilder.StampContinents();
 
-	local iContinentBoundaryPlots = GetContinentBoundaryPlotCount(g_iW, g_iH);
-	local biggest_area = Areas.FindBiggestArea(false);
-	print("After Adding Hills: ", biggest_area:GetPlotCount());
-	AddTerrainFromContinents(plotTypes, terrainTypes, world_age, g_iW, g_iH, iContinentBoundaryPlots);
-
+	-- 理由（M1-Tec）：AddTerrainFromContinents 按 world_age 在陆内随机撒丘陵，
+	-- 与"板内大片低地"（R4 裁决）直接冲突，旁路；其后的 AreaBuilder.Recalculate
+	-- 保留（官方注释同款：批量改动后统一重算，防下游读到脏 Area 缓存）。
+	-- 山系起伏改由消亡边界裙边提供（RR_Tectonics 第七遍）。
 	AreaBuilder.Recalculate();
 	rrStageClock = RR_Probe("地形", rrStageClock);
 
-	-- RR M1 T2/T3：海拔场 + 形态层 + 山麓带。
-	-- 理由（插入点）：此时 plot 类型与地形均已定稿（AddTerrainFromContinents 之后），
-	-- 且仍在 AddRivers 之前——满足原版不变量"河流发源于高地，丘陵/山地布局须在
-	-- 河流前定稿"（调研 A 报告 M1 节），山麓带改动才能被河流/特征/资源全程看到。
-	RR_BuildElevationAndForms();
+	-- RR M1-Tec：形态层（海拔场由 RR_Tectonics_GeneratePlots 在板块地基阶段
+	-- 生成；此处按旧 RR_BuildElevationAndForms 同款插入点补形态分类——
+	-- 满足原版不变量"丘陵/山地布局须在河流前定稿"）。
+	RR_Tectonics_BuildForms();
 	RR_ApplyFoothills();
 	RR_ApplySnowRidge();
 	RR_PersistElevation();
@@ -286,612 +288,18 @@ end
 
 -------------------------------------------------------------------------------
 function GeneratePlotTypes(world_age)
-	print("Generating Plot Types");
-	local plotTypes = {};
-
-	local sea_level_low = 57;
-	local sea_level_normal = 62;
-	local sea_level_high = 66;
-
-	local extra_mountains = 0;
-	local grain_amount = 3;
-	local adjust_plates = 1.0;
-	local shift_plot_types = true;
-	local tectonic_islands = false;
-	local hills_ridge_flags = g_iFlags;
-	local peaks_ridge_flags = g_iFlags;
-	local has_center_rift = true;
-	local water_percent;
-
-	--	local sea_level
-    	local sea_level = MapConfiguration.GetValue("sea_level");
-	if sea_level == 1 then -- Low Sea Level
-		water_percent = sea_level_low
-	elseif sea_level == 2 then -- Normal Sea Level
-		water_percent =sea_level_normal
-	elseif sea_level == 3 then -- High Sea Level
-		water_percent = sea_level_high
-	else
-		water_percent = TerrainBuilder.GetRandomNumber(sea_level_high - sea_level_low, "Random Sea Level - Lua") + sea_level_low  + 1;
-	end
-	-- 理由（T2）：捕获海平面百分比供海拔场复用同一阈值（不重复调用随机数，
-	-- 避免扰动原版随机流顺序）。
-	g_RR_waterPercent = water_percent;
-
-	-- Set values for hills and mountains according to World Age chosen by user.
-	local adjustment = world_age;
-	if world_age <= world_age_old  then -- 5 Billion Years
-		adjust_plates = adjust_plates * 0.75;
-	elseif world_age >= world_age_new then -- 3 Billion Years
-		adjust_plates = adjust_plates * 1.5;
-	else -- 4 Billion Years
-	end
-
-	-- Generate continental fractal layer and examine the largest landmass. Reject
-	-- the result until the largest landmass occupies 58% or less of the total land.
-	local done = false;
-	local iAttempts = 0;
-	local iWaterThreshold, biggest_area, iNumTotalLandTiles, iNumBiggestAreaTiles, iBiggestID;
-	while done == false do
-		local grain_dice = TerrainBuilder.GetRandomNumber(7, "Continental Grain roll - LUA Continents");
-		if grain_dice < 4 then
-			grain_dice = 2;
-		else
-			grain_dice = 1;
-		end
-		local rift_dice = TerrainBuilder.GetRandomNumber(3, "Rift Grain roll - LUA Continents");
-		if rift_dice < 1 then
-			rift_dice = -1;
-		end
-		
-		InitFractal{continent_grain = grain_dice, rift_grain = rift_dice};
-		iWaterThreshold = g_continentsFrac:GetHeight(water_percent);
-		local iBuffer = math.floor(g_iH/13.0);
-		local iBuffer2 = math.floor(g_iH/13.0/2.0);
-
-		iNumTotalLandTiles = 0;
-		for x = 0, g_iW - 1 do
-			for y = 0, g_iH - 1 do
-				local i = y * g_iW + x;
-				local val = g_continentsFrac:GetHeight(x, y);
-				local pPlot = Map.GetPlotByIndex(i);
-
-				if(y <= iBuffer or y >= g_iH - iBuffer - 1) then
-					plotTypes[i] = g_PLOT_TYPE_OCEAN;
-					TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_OCEAN);  -- temporary setting so can calculate areas
-				else
-					if(val >= iWaterThreshold) then
-						if(y <= iBuffer + iBuffer2) then
-							local iRandomRoll = y - iBuffer + 1;
-							local iRandom = TerrainBuilder.GetRandomNumber(iRandomRoll, "Random Region Edges");
-							if(iRandom == 0 and iRandomRoll > 0) then
-								plotTypes[i] = g_PLOT_TYPE_LAND;
-								TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_DESERT);  -- temporary setting so can calculate areas
-								iNumTotalLandTiles = iNumTotalLandTiles + 1;
-							else 
-								plotTypes[i] = g_PLOT_TYPE_OCEAN;
-								TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_OCEAN);  -- temporary setting so can calculate areas
-							end
-						elseif (y >= g_iH - iBuffer - iBuffer2 - 1) then
-							local iRandomRoll = g_iH - y - iBuffer;
-							local iRandom = TerrainBuilder.GetRandomNumber(iRandomRoll, "Random Region Edges");
-							if(iRandom == 0 and iRandomRoll > 0) then
-								plotTypes[i] = g_PLOT_TYPE_LAND;
-								TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_DESERT);  -- temporary setting so can calculate areas
-								iNumTotalLandTiles = iNumTotalLandTiles + 1;
-							else
-								plotTypes[i] = g_PLOT_TYPE_OCEAN;
-								TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_OCEAN);  -- temporary setting so can calculate areas
-							end
-						else
-							plotTypes[i] = g_PLOT_TYPE_LAND;
-							TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_DESERT);  -- temporary setting so can calculate areas
-							iNumTotalLandTiles = iNumTotalLandTiles + 1;
-						end
-					else
-						plotTypes[i] = g_PLOT_TYPE_OCEAN;
-						TerrainBuilder.SetTerrainType(pPlot, g_TERRAIN_TYPE_OCEAN);  -- temporary setting so can calculate areas
-					end
-				end
-			end
-		end
-
-		ShiftPlotTypes(plotTypes);
-		GenerateCenterRift(plotTypes);
-
-		AreaBuilder.Recalculate();
-		local biggest_area = Areas.FindBiggestArea(false);
-		iNumBiggestAreaTiles = biggest_area:GetPlotCount();
-		
-		-- Now test the biggest landmass to see if it is large enough.
-		if iNumBiggestAreaTiles <= iNumTotalLandTiles * 0.64 then
-			done = true;
-			iBiggestID = biggest_area:GetID();
-		end
-		iAttempts = iAttempts + 1;
-		
-		-- Printout for debug use only
-		-- print("-"); print("--- Continents landmass generation, Attempt#", iAttempts, "---");
-		-- print("- This attempt successful: ", done);
-		-- print("- Total Land Plots in world:", iNumTotalLandTiles);
-		-- print("- Land Plots belonging to biggest landmass:", iNumBiggestAreaTiles);
-		-- print("- Percentage of land belonging to biggest: ", 100 * iNumBiggestAreaTiles / iNumTotalLandTiles);
-		-- print("- Continent Grain for this attempt: ", grain_dice);
-		-- print("- Rift Grain for this attempt: ", rift_dice);
-		-- print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
-		-- print(".");
-	end
-
-	-- 理由（T2）：捕获最终生效的海陆分形阈值（最后一次尝试的 iWaterThreshold，
-	-- 与最终 plotTypes 严格同阈值），供海拔场把分形高度换算为水深/陆高。
-	g_RR_waterThreshold = iWaterThreshold;
-	
-	local args = {};
-	args.world_age = world_age;
-	args.iW = g_iW;
-	args.iH = g_iH
-	args.iFlags = g_iFlags;
-	args.blendRidge = 10;
-	args.blendFract = 5;
-	args.extra_mountains = 5;
-	mountainRatio = 8 + world_age * 3;
-	plotTypes = ApplyTectonics(args, plotTypes);
-	plotTypes = AddLonelyMountains(plotTypes, mountainRatio);
-
+	print("Generating Plot Types (RR Tectonics)");
+	-- 理由（M1-Tec）：板块地壳生成地基，整体取代原版分形海陆管线
+	-- （InitFractal/ShiftPlotTypes/GenerateCenterRift/最大陆块拒绝循环/
+	-- ApplyTectonics/AddLonelyMountains 全部旁路）。取舍论证与探针预期对照表
+	-- 见 docs/M1-板块地壳生成-设计.md §6.2 / §8。
+	-- 诚实标注（1）：sea_level 用户配置自此失效——陆海比由板块种子配比决定
+	-- （设计文档 §3.1），不再有"海平面升降"概念。
+	-- 诚实标注（2）：world_age 不再撒山（AddTerrainFromContinents 亦旁路，
+	-- 见 GenerateMap 调用点注释），仅影响地形壳纬度细节。
+	local plotTypes = RR_Tectonics_GeneratePlots(world_age);
 	return plotTypes;
 end
-
-function InitFractal(args)
-
-	if(args == nil) then args = {}; end
-
-	local continent_grain = args.continent_grain or 2;
-	local rift_grain = args.rift_grain or -1; -- Default no rifts. Set grain to between 1 and 3 to add rifts. - Bob
-	local invert_heights = args.invert_heights or false;
-	local polar = args.polar or true;
-	local ridge_flags = args.ridge_flags or g_iFlags;
-
-	local fracFlags = {};
-	
-	if(invert_heights) then
-		fracFlags.FRAC_INVERT_HEIGHTS = true;
-	end
-	
-	if(polar) then
-		fracFlags.FRAC_POLAR = true;
-	end
-	
-	if(rift_grain > 0 and rift_grain < 4) then
-		local riftsFrac = Fractal.Create(g_iW, g_iH, rift_grain, {}, 6, 5);
-		g_continentsFrac = Fractal.CreateRifts(g_iW, g_iH, continent_grain, fracFlags, riftsFrac, 6, 5);
-	else
-		g_continentsFrac = Fractal.Create(g_iW, g_iH, continent_grain, fracFlags, 6, 5);	
-	end
-
-	-- Use Brian's tectonics method to weave ridgelines in to the continental fractal.
-	-- Without fractal variation, the tectonics come out too regular.
-	--
-	--[[ "The principle of the RidgeBuilder code is a modified Voronoi diagram. I 
-	added some minor randomness and the slope might be a little tricky. It was 
-	intended as a 'whole world' modifier to the fractal class. You can modify 
-	the number of plates, but that is about it." ]]-- Brian Wade - May 23, 2009
-	--
-	local MapSizeTypes = {};
-	for row in GameInfo.Maps() do
-		MapSizeTypes[row.MapSizeType] = row.PlateValue;
-	end
-	local sizekey = Map.GetMapSize();
-
-	local numPlates = MapSizeTypes[sizekey] or 4
-
-	-- Blend a bit of ridge into the fractal.
-	-- This will do things like roughen the coastlines and build inland seas. - Brian
-
-	g_continentsFrac:BuildRidges(numPlates, {}, 1, 2);
-end
-
-function AddFeatures()
-	print("Adding Features");
-
-	-- Get Rainfall setting input by user.
-	local rainfall = MapConfiguration.GetValue("rainfall");
-	if rainfall == 4 then
-		rainfall = 1 + TerrainBuilder.GetRandomNumber(3, "Random Rainfall - Lua");
-	end
-	
-	local args = {rainfall = rainfall}
-	featuregen = FeatureGenerator.Create(args);
-	featuregen:AddFeatures(true, true);  --second parameter is whether or not rivers start inland);
-end
-
-function AddFeaturesFromContinents()
-	print("Adding Features from Continents");
-
-	featuregen:AddFeaturesFromContinents();
-end
-
-function GenerateCenterRift(plotTypes)
-	-- Causes a rift to break apart and separate any landmasses overlaying the map center.
-	-- Rift runs south to north ala the Atlantic Ocean.
-	-- Any land plots in the first or last map columns will be lost, overwritten.
-	-- This rift function is hex-dependent. It would have to be adapted to work with squares tiles.
-	-- Center rift not recommended for non-oceanic worlds or with continent grains higher than 2.
-	-- 
-	-- First determine the rift "lean". 0 = Starts west, leans east. 1 = Starts east, leans west.
-	local riftLean = TerrainBuilder.GetRandomNumber(2, "FractalWorld Center Rift Lean - Lua");
-	
-	-- Set up tables recording the rift line and the edge plots to each side of the rift line.
-	local riftLine = {};
-	local westOfRift = {};
-	local eastOfRift = {};
-	-- Determine minimum and maximum length of line segments for each possible direction.
-	local primaryMaxLength = math.max(1, math.floor(g_iH / 8));
-	local secondaryMaxLength = math.max(1, math.floor(g_iH / 11));
-	local tertiaryMaxLength = math.max(1, math.floor(g_iH / 14));
-	
-	-- Set rift line starting plot and direction.
-	local startDistanceFromCenterColumn = math.floor(g_iH / 8);
-	if riftLean == 0 then
-		startDistanceFromCenterColumn = -(startDistanceFromCenterColumn);
-	end
-	local startX = math.floor(g_iW / 2) + startDistanceFromCenterColumn;
-	local startY = 0;
-	local startingDirection = DirectionTypes.DIRECTION_NORTHWEST;
-	if riftLean == 0 then
-		startingDirection = DirectionTypes.DIRECTION_NORTHEAST;
-	end
-	-- Set rift X boundary.
-	local riftXBoundary = math.floor(g_iW / 2) - startDistanceFromCenterColumn;
-	
-	-- Rift line is defined by a series of line segments traveling in one of three directions.
-	-- East-leaning lines move NE primarily, NW secondarily, and E tertiary.
-	-- West-leaning lines move NW primarily, NE secondarily, and W tertiary.
-	-- Any E or W segments cause a wider gap on that row, requiring independent storage of data regarding west or east of rift.
-	--
-	-- Key variables need to be defined here so they persist outside of the various loops that follow.
-	-- This requires that the starting plot be processed outside of those loops.
-	local currentDirection = startingDirection;
-	local currentX = startX;
-	local currentY = startY;
-	table.insert(riftLine, {currentX, currentY});
-	-- Record west and east of the rift for this row.
-	local rowIndex = currentY + 1;
-	westOfRift[rowIndex] = currentX - 1;
-	eastOfRift[rowIndex] = currentX + 1;
-	-- Set this rift plot as type Ocean.
-	local plotIndex = currentX + 1; -- Lua arrays starting at 1 sure makes for a lot of extra work and chances for bugs.
-	plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN; -- Tiles crossed by the rift all turn in to water.
-	
-	-- Generate the rift line.
-	if riftLean == 0 then -- Leans east
-		while currentY < g_iH - 1 do
-			-- Generate a line segment
-			local nextDirection = 0;
-
-			if currentDirection == DirectionTypes.DIRECTION_EAST then
-				local segmentLength = TerrainBuilder.GetRandomNumber(tertiaryMaxLength + 1, "FractalWorld Center Rift Segment Length - Lua");
-				-- Choose next direction
-				if currentX >= riftXBoundary then -- Gone as far east as allowed, must turn back west.
-					nextDirection = DirectionTypes.DIRECTION_NORTHWEST;
-				else
-					local dice = TerrainBuilder.GetRandomNumber(3, "FractalWorld Center Rift Direction - Lua");
-					if dice == 1 then
-						nextDirection = DirectionTypes.DIRECTION_NORTHWEST;
-					else
-						nextDirection = DirectionTypes.DIRECTION_NORTHEAST;
-					end
-				end
-				-- Process the line segment
-				local plotsToDo = segmentLength;
-				while plotsToDo > 0 do
-					currentX = currentX + 1; -- Moving east, no change to Y.
-					rowIndex = currentY;
-					-- westOfRift[rowIndex] does not change.
-					eastOfRift[rowIndex] = currentX + 1;
-					plotIndex = currentY * g_iW + currentX + 1;
-					plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-					plotsToDo = plotsToDo - 1;
-				end
-
-			elseif currentDirection == DirectionTypes.DIRECTION_NORTHWEST then
-				local segmentLength = TerrainBuilder.GetRandomNumber(secondaryMaxLength + 1, "FractalWorld Center Rift Segment Length - Lua");
-				-- Choose next direction
-				if currentX >= riftXBoundary then -- Gone as far east as allowed, must turn back west.
-					nextDirection = DirectionTypes.DIRECTION_NORTHWEST;
-				else
-					local dice = TerrainBuilder.GetRandomNumber(4, "FractalWorld Center Rift Direction - Lua");
-					if dice == 2 then
-						nextDirection = DirectionTypes.DIRECTION_EAST;
-					else
-						nextDirection = DirectionTypes.DIRECTION_NORTHEAST;
-					end
-				end
-				-- Process the line segment
-				local plotsToDo = segmentLength;
-				while plotsToDo > 0 and currentY < g_iH - 1 do
-					local nextPlot = Map.GetAdjacentPlot(currentX, currentY, currentDirection);
-					currentX = nextPlot:GetX();
-					currentY = currentY + 1;
-					rowIndex = currentY;
-					westOfRift[rowIndex] = currentX - 1;
-					eastOfRift[rowIndex] = currentX + 1;
-					plotIndex = currentY * g_iW + currentX + 1;
-					plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-					plotsToDo = plotsToDo - 1;
-				end
-				
-			else -- NORTHEAST
-				local segmentLength = TerrainBuilder.GetRandomNumber(primaryMaxLength + 1, "FractalWorld Center Rift Segment Length - Lua");
-				-- Choose next direction
-				if currentX >= riftXBoundary then -- Gone as far east as allowed, must turn back west.
-					nextDirection = DirectionTypes.DIRECTION_NORTHWEST;
-				else
-					local dice = TerrainBuilder.GetRandomNumber(2, "FractalWorld Center Rift Direction - Lua");
-					if dice == 1 and currentY > g_iH * 0.28 then
-						nextDirection = DirectionTypes.DIRECTION_EAST;
-					else
-						nextDirection = DirectionTypes.DIRECTION_NORTHWEST;
-					end
-				end
-				-- Process the line segment
-				local plotsToDo = segmentLength;
-				while plotsToDo > 0 and currentY < g_iH - 1 do
-					local nextPlot = Map.GetAdjacentPlot(currentX, currentY, currentDirection);
-					currentX = nextPlot:GetX();
-					currentY = currentY + 1;
-					rowIndex = currentY;
-					westOfRift[rowIndex] = currentX - 1;
-					eastOfRift[rowIndex] = currentX + 1;
-					plotIndex = currentY * g_iW + currentX + 1;
-					plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-					plotsToDo = plotsToDo - 1;
-				end
-			end
-			
-			-- Line segment is done, set next direction.
-			currentDirection = nextDirection;
-		end
-
-	else -- Leans west
-		while currentY < g_iH - 1 do
-			-- Generate a line segment
-			local nextDirection = 0;
-
-			if currentDirection == DirectionTypes.DIRECTION_WEST then
-				local segmentLength = TerrainBuilder.GetRandomNumber(tertiaryMaxLength + 1, "FractalWorld Center Rift Segment Length - Lua");
-				-- Choose next direction
-				if currentX <= riftXBoundary then -- Gone as far west as allowed, must turn back east.
-					nextDirection = DirectionTypes.DIRECTION_NORTHEAST;
-				else
-					local dice = TerrainBuilder.GetRandomNumber(3, "FractalWorld Center Rift Direction - Lua");
-					if dice == 1 then
-						nextDirection = DirectionTypes.DIRECTION_NORTHEAST;
-					else
-						nextDirection = DirectionTypes.DIRECTION_NORTHWEST;
-					end
-				end
-				-- Process the line segment
-				local plotsToDo = segmentLength;
-				while plotsToDo > 0 do
-					currentX = currentX - 1; -- Moving west, no change to Y.
-					rowIndex = currentY;
-					westOfRift[rowIndex] = currentX - 1;
-					-- eastOfRift[rowIndex] does not change.
-					plotIndex = currentY * g_iW + currentX + 1;
-					plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-					plotsToDo = plotsToDo - 1;
-				end
-
-			elseif currentDirection == DirectionTypes.DIRECTION_NORTHEAST then
-				local segmentLength = TerrainBuilder.GetRandomNumber(secondaryMaxLength + 1, "FractalWorld Center Rift Segment Length - Lua");
-				-- Choose next direction
-				if currentX <= riftXBoundary then -- Gone as far west as allowed, must turn back east.
-					nextDirection = DirectionTypes.DIRECTION_NORTHEAST;
-				else
-					local dice = TerrainBuilder.GetRandomNumber(4, "FractalWorld Center Rift Direction - Lua");
-					if dice == 2 then
-						nextDirection = DirectionTypes.DIRECTION_WEST;
-					else
-						nextDirection = DirectionTypes.DIRECTION_NORTHWEST;
-					end
-				end
-				-- Process the line segment
-				local plotsToDo = segmentLength;
-				while plotsToDo > 0 and currentY < g_iH - 1 do
-					local nextPlot = Map.GetAdjacentPlot(currentX, currentY, currentDirection);
-					currentX = nextPlot:GetX();
-					currentY = currentY + 1;
-					rowIndex = currentY;
-					westOfRift[rowIndex] = currentX - 1;
-					eastOfRift[rowIndex] = currentX + 1;
-					plotIndex = currentY * g_iW + currentX + 1;
-					plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-					plotsToDo = plotsToDo - 1;
-				end
-				
-			else -- NORTHWEST
-				local segmentLength = TerrainBuilder.GetRandomNumber(primaryMaxLength + 1, "FractalWorld Center Rift Segment Length - Lua");
-				-- Choose next direction
-				if currentX <= riftXBoundary then -- Gone as far west as allowed, must turn back east.
-					nextDirection = DirectionTypes.DIRECTION_NORTHEAST;
-				else
-					local dice = TerrainBuilder.GetRandomNumber(2, "FractalWorld Center Rift Direction - Lua");
-					if dice == 1 and currentY > g_iH * 0.28 then
-						nextDirection = DirectionTypes.DIRECTION_WEST;
-					else
-						nextDirection = DirectionTypes.DIRECTION_NORTHEAST;
-					end
-				end
-				-- Process the line segment
-				local plotsToDo = segmentLength;
-				while plotsToDo > 0 and currentY < g_iH - 1 do
-					local nextPlot = Map.GetAdjacentPlot(currentX, currentY, currentDirection);
-					currentX = nextPlot:GetX();
-					currentY = currentY + 1;
-					rowIndex = currentY;
-					westOfRift[rowIndex] = currentX - 1;
-					eastOfRift[rowIndex] = currentX + 1;
-					plotIndex = currentY * g_iW + currentX + 1;
-					plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-					plotsToDo = plotsToDo - 1;
-				end
-			end
-			
-			-- Line segment is done, set next direction.
-			currentDirection = nextDirection;
-		end
-	end
-	-- Process the final plot in the rift.
-	westOfRift[g_iH] = currentX - 1;
-	eastOfRift[g_iH] = currentX + 1;
-	plotIndex = (g_iH - 1) * g_iW + currentX + 1;
-	plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-
-	-- Now force the rift to widen, causing land on either side of the rift to drift apart.
-	local horizontalDrift = 3;
-	local verticalDrift = 2;
-	--
-	if riftLean == 0 then
-		-- Process Western side from top down.
-		for y = g_iH - 1 - verticalDrift, 0, -1 do
-			local thisRowX = westOfRift[y+1];
-			for x = horizontalDrift, thisRowX do
-				local sourcePlotIndex = y * g_iW + x + 1;
-				local destPlotIndex = (y + verticalDrift) * g_iW + (x - horizontalDrift) + 1;
-				plotTypes[destPlotIndex] = plotTypes[sourcePlotIndex]
-			end
-		end
-		-- Process Eastern side from bottom up.
-		for y = verticalDrift, g_iH - 1 do
-			local thisRowX = eastOfRift[y+1];
-			for x = thisRowX, g_iW - horizontalDrift - 1 do
-				local sourcePlotIndex = y * g_iW + x + 1;
-				local destPlotIndex = (y - verticalDrift) * g_iW + (x + horizontalDrift) + 1;
-				plotTypes[destPlotIndex] = plotTypes[sourcePlotIndex]
-			end
-		end
-		-- Clean up remainder of tiles (by turning them all to Ocean).
-		-- Clean up bottom left.
-		for y = 0, verticalDrift - 1 do
-			local thisRowX = westOfRift[y+1];
-			for x = 0, thisRowX do
-				local plotIndex = y * g_iW + x + 1;
-				plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-			end
-		end
-		-- Clean up top right.
-		for y = g_iH - verticalDrift, g_iH - 1 do
-			local thisRowX = eastOfRift[y+1];
-			for x = thisRowX, g_iW - 1 do
-				local plotIndex = y * g_iW + x + 1;
-				plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-			end
-		end
-		-- Clean up the rift.
-		for y = verticalDrift, g_iH - 1 - verticalDrift do
-			local westX = westOfRift[y-verticalDrift+1] - horizontalDrift + 1;
-			local eastX = eastOfRift[y+verticalDrift+1] + horizontalDrift - 1;
-			for x = westX, eastX do
-				local plotIndex = y * g_iW + x + 1;
-				plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-			end
-		end
-
-	else -- riftLean = 1
-		-- Process Western side from bottom up.
-		for y = verticalDrift, g_iH - 1 do
-			local thisRowX = westOfRift[y+1];
-			for x = horizontalDrift, thisRowX do
-				local sourcePlotIndex = y * g_iW + x + 1;
-				local destPlotIndex = (y - verticalDrift) * g_iW + (x - horizontalDrift) + 1;
-				plotTypes[destPlotIndex] = plotTypes[sourcePlotIndex]
-			end
-		end
-		-- Process Eastern side from top down.
-		for y = g_iH - 1 - verticalDrift, 0, -1 do
-			local thisRowX = eastOfRift[y+1];
-			for x = thisRowX, g_iW - horizontalDrift - 1 do
-				local sourcePlotIndex = y * g_iW + x + 1;
-				local destPlotIndex = (y + verticalDrift) * g_iW + (x + horizontalDrift) + 1;
-				plotTypes[destPlotIndex] = plotTypes[sourcePlotIndex]
-			end
-		end
-		-- Clean up remainder of tiles (by turning them all to Ocean).
-		-- Clean up top left.
-		for y = g_iH - verticalDrift, g_iH - 1 do
-			local thisRowX = westOfRift[y+1];
-			for x = 0, thisRowX do
-				local plotIndex = y * g_iW + x + 1;
-				plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-			end
-		end
-		-- Clean up bottom right.
-		for y = 0, verticalDrift - 1 do
-			local thisRowX = eastOfRift[y+1];
-			for x = thisRowX, g_iW - 1 do
-				local plotIndex = y * g_iW + x + 1;
-				plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-			end
-		end
-		-- Clean up the rift.
-		for y = verticalDrift, g_iH - 1 - verticalDrift do
-			local westX = westOfRift[y+verticalDrift+1] - horizontalDrift + 1;
-			local eastX = eastOfRift[y-verticalDrift+1] + horizontalDrift - 1;
-			for x = westX, eastX do
-				local plotIndex = y * g_iW + x + 1;
-				plotTypes[plotIndex] = g_PLOT_TYPE_OCEAN;
-			end
-		end
-	end
-
-
-end
--------------------------------------------------------------------------------
--- RR M1 海拔场与形态层（T2/T3 实现块）
---
--- 确定性论证（M1 纪律：双保险）：
---   本块全部函数是【纯函数】——只读取本局已生成的 g_continentsFrac 分形高度与
---   地块状态，不创建新 Fractal、不调用 GetRandomNumber。因此：
---     (a) 不扰动原版随机流/分形创建顺序 → 同种子下原版生成结果与基线逐格一致；
---     (b) 海拔场是"同种子地图状态"的确定函数 → 读档/重开可由种子精确重算。
---   MapConfiguration 持久化（RR_PersistElevation）是锦上添花的第一保险；
---   种子重算是第二保险。两者皆失败也不影响地图生成本身（全程 pcall 防御）。
--------------------------------------------------------------------------------
-
--- 海拔模型公式（T2，单位米）：
---   记 h = g_continentsFrac:GetHeight(x,y)（海陆分形原始高度），
---       thr = g_RR_waterThreshold（海平面阈值，GeneratePlotTypes 捕获）。
---   陆侧归一 u = clamp((h - thr) / thr, 0, 1)（海岸带 u≈0，分形高处 u→1）
---   水侧归一 d = clamp((thr - h) / thr, 0, 1)（海岸线 d=0，远洋 d→1）
---
---   平地（PLOT_TYPE_LAND）  elev =   5 + 135*u          →    5~140m（<200m 低地）
---     其中沿海平地（IsCoastalLand）额外压到 ≤50m（海岸≈0）
---   丘陵（PLOT_TYPE_HILLS）  elev = 120 + 270*u          →  120~390m（起伏带）
---   山地（PLOT_TYPE_MOUNTAIN）elev = 1500 + 1500*u       → 1500~3000m（策划案山地带）
---     主脊升级：u>0.92 或 ≥5 个邻格为山地（山体内部）→ elev = 2800 + 1000*u
---     （旧值 3500+1000u；主脊门槛随 RR_FORM_RIDGE_MIN_ELEV 下移，雪线观感
---     由 RR_ApplySnowRidge 换肤保证，见该函数注释）
---   海洋                     elev = -25 - 5800*d^1.3    →  -25m（岸）~-5825m（深海沟）
---     水深分级负值（M6 实测调参后）：海岸≈0、浅海 -800~-100、深海 ≤-800
---     （旧分界：浅海 -2000~-200、深海 ≤-2000——浅海带过宽，见常量区注释）
---
---   参数选取理由：陆侧振幅 M8 起整体压低约 25%（平地 180→135、丘陵 360→270、
---   山地 2000→1500、主脊基数 3500→2800）——用户实测"山河占绝大部分陆地、
---   平原几乎没了"：振幅决定邻格高差，而"隆起"形态由邻格高差≥50m 判定，
--- 压低振幅 → 隆起/山麓减少、低地增多；山地形态分界 500→700、主脊 3500→2800
--- 同步收窄山体高程带（RR_FORM_* 常量区注释）。海洋振幅未动（M6 已定稿）。
---   u 用 (h-thr)/thr 是因为陆侧分形高度典型
---   区间为 [thr, 2*thr]，归一后覆盖 0~1；海洋幂 1.3 让浅段（大陆架）过渡
---   更缓——分级观感现由分类阈值主导，幂值不再肩负重任。
---
--- 形态层 8 类（判定完备无空档；RR_ClassifyForm 实现）：
---   水：邻陆 → 海岸/水面（与大河可航行段共用的形态，M2 复用此格）；
---       否则 elev ≤ -800 → 深海；-800 < elev ≤ -100 → 浅海；
---       elev > -100（离岸极浅水）→ 海岸/水面观感（M6：不建卡，保持原版
---       COAST 壳，构成"近岸一小圈浅色"）。
---   陆：elev > 2800 → 主脊；700~2800 → 山地；200~700 → 山麓；
---       <200 且邻格最大高差 ≥50m → 隆起（岗地/丘陵）；否则 → 低地。
--------------------------------------------------------------------------------
 
 function RR_CountMountainNeighbors(x, y)
 	-- 理由（T2 主脊判定）：统计 6 邻格中 PLOT_TYPE_MOUNTAIN 的数量，
@@ -973,97 +381,6 @@ function RR_ClassifyForm(elev, isWater, hasAdjacentLand, maxNeighborDiff)
 	end
 end
 
-function RR_BuildElevationAndForms()
-	-- 理由（T2）：插入点见 GenerateMap 注释（地形定稿后、河流前）。
-	-- 全程无随机数消耗（确定性论证见本块头部）。
-	if g_continentsFrac == nil or g_RR_waterThreshold == nil or g_RR_waterThreshold <= 0 then
-		-- 理由：防御——阈值捕获失败时跳过海拔场（如未来从其他入口调用），
-		-- 绝不允许海拔场反过来弄崩地图生成。
-		print("[RRMap M1] WARNING: 海拔场跳过——分形阈值未捕获");
-		return;
-	end
-
-	local thr = g_RR_waterThreshold;
-	g_RR_elevation = {};
-	g_RR_form = {};
-
-	-- 第一遍：海拔。海洋与陆地分别用 d / u 归一化（公式见本块头部注释）。
-	for y = 0, g_iH - 1 do
-		for x = 0, g_iW - 1 do
-			local i = y * g_iW + x + 1; -- Lua 1-based
-			local pPlot = Map.GetPlot(x, y);
-			local h = g_continentsFrac:GetHeight(x, y);
-			local elev = 0;
-			if pPlot:IsWater() then
-				local d = (thr - h) / thr;
-				if d < 0 then d = 0; elseif d > 1 then d = 1; end
-				elev = -25 - 5800 * (d ^ 1.3);
-			else
-				local u = (h - thr) / thr;
-				if u < 0 then u = 0; end
-				if u > 1 then u = 1; end
-				-- 理由（API 选型）：建图上下文用 IsMountain/IsHills 判定，不用
-				-- GetPlotType（该方法在建图上下文未绑定，实证见
-				-- RR_CountMountainNeighbors 头部注释）。
-				if pPlot:IsMountain() then
-					if u > 0.92 or RR_CountMountainNeighbors(x, y) >= 5 then
-						-- 理由（M8 山体收窄）：主脊基数 3500→2800（与形态门槛
-						-- RR_FORM_RIDGE_MIN_ELEV 同步）；振幅 1000 未动——雪核
-						-- 内部高程带 2800~3800m，雪线观感由换肤保证。
-						elev = 2800 + 1000 * u; -- 主脊带
-					else
-						-- 理由（M8 陆地起伏 -25%）：山地振幅 2000→1500，
-						-- 山体高程带收窄为 1500~3000m（旧 1500~3500）。
-						elev = 1500 + 1500 * u; -- 山地带
-					end
-				elseif pPlot:IsHills() then
-					-- 理由（M8 陆地起伏 -25%）：丘陵振幅 360→270（120~390m）。
-					elev = 120 + 270 * u;
-				else
-					-- 理由（M8 陆地起伏 -25%）：平地振幅 180→135（5~140m），
-					-- 低地格更多、邻格高差收窄 → 隆起判定（≥50m）更难触发。
-					elev = 5 + 135 * u;
-					if pPlot:IsCoastalLand() then
-						-- 海岸≈0：沿海平地压到 50m 以下
-						local cap = 30 + 20 * u;
-						if elev > cap then
-							elev = cap;
-						end
-					end
-				end
-			end
-			g_RR_elevation[i] = elev;
-		end
-	end
-
-	-- 第二遍：形态。需要全表海拔（邻格高差），故分两遍。
-	local formCounts = {};
-	for y = 0, g_iH - 1 do
-		for x = 0, g_iW - 1 do
-			local i = y * g_iW + x + 1;
-			local pPlot = Map.GetPlot(x, y);
-			local isWater = pPlot:IsWater();
-			local hasLand = false;
-			local maxDiff = 0;
-			if isWater then
-				hasLand = RR_HasAdjacentLand(x, y);
-			else
-				maxDiff = RR_MaxNeighborElevDiff(x, y);
-			end
-			local form = RR_ClassifyForm(g_RR_elevation[i], isWater, hasLand, maxDiff);
-			g_RR_form[i] = form;
-			formCounts[form] = (formCounts[form] or 0) + 1;
-		end
-	end
-
-	-- 理由（T2）：形态分布一次性打印，tuner 日志里可立即核对 8 类是否完备无空档。
-	-- 理由（M6）：分级阈值随分布一并打印——本地无法实机验证海洋比例，
-	-- 新图以本条 + 下条的形态分布复核深海/浅海占比是否显著上升。
-	print(string.format("[RRMap M1] 海洋分级阈值: 深海≤%dm, 浅海≤%dm（M6 实测调参，旧值 -2000/-200）",
-		RR_SEA_DEEP_ELEV, RR_SEA_SHALLOW_MAX_ELEV));
-	print("[RRMap M1] 形态分布: " .. RR_FormCountsToString(formCounts));
-end
-
 function RR_FormCountsToString(formCounts)
 	-- 理由：统计表序列化，供探针打印；tostring 防 nil。
 	local parts = {};
@@ -1094,7 +411,8 @@ function RR_ApplyFoothills()
 	-- 理由（T3 最小可见改动）：把策划案"山麓带"落到原版枚举上——与山地相邻的
 	-- 原版平地强制改为丘陵，使 主脊(>RR_FORM_RIDGE_MIN_ELEV)→山麓→低地
 	-- 的过渡带在游戏中肉眼可见（M8 起主脊门槛 2800，旧 3500）。
-	-- 只动这一步：不改分形、不改山地本体、不重构流程。
+	-- 只动这一步：不改山链本体、不重构流程（M1-Tec 注：山体位置改由
+	-- RR_Tectonics 消亡边界决定，本函数只做链旁一格过渡带）。
 	-- 理由（API 选型，M1 首测修正）：建图上下文 plot userdata 不暴露
 	-- GetPlotType/SetPlotType（原版仅死分支引用；活跃代码用 IsMountain/IsHills/
 	-- 地形变体），故平地判定用 not IsHills and not IsMountain，丘陵提交用
