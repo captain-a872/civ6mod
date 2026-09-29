@@ -81,12 +81,11 @@ MATRIX = [
     # 故照抄 GRASS_MOUNTAIN 属性列（原版全部 *_MOUNTAIN 行逐列同值，数值等价不破）。
     ("TERRAIN_RR_MOUNTAIN",    "TERRAIN_GRASS_MOUNTAIN"),
     ("TERRAIN_RR_RIDGE",       "TERRAIN_SNOW_MOUNTAIN"),
-    # 海洋三级具名化（策划案 1.2：深海 ≤-2000m / 浅海 -2000~-200m / 海岸·水面≈0m）：
-    # 深海借 TERRAIN_OCEAN 壳、浅海借 TERRAIN_COAST 壳（含 ShallowWater 列，
-    # 浅水贴图/下船上船语义随壳走）；"海岸/水面"形态保持原版 COAST 不建卡，
-    # 大河水面 TERRAIN_RR_RIVER 已另行注册（mod/Data/RR_Terrain.xml）。
-    ("TERRAIN_RR_DEEPSEA",     "TERRAIN_OCEAN"),
-    ("TERRAIN_RR_SHALLOW",     "TERRAIN_COAST"),
+    # 理由（M8 清理，2026-10-02）：水具名卡 TERRAIN_RR_DEEPSEA/RR_SHALLOW
+    # 已删除——M7 定论引擎浅水 3D 路径不解析自定义水地形，水全部直落原版
+    # OCEAN/COAST（RR_Continents.lua waterMatrix），具名卡无人引用；"海岸/水面"
+    # 形态保持原版 COAST 不建卡，大河水面 TERRAIN_RR_RIVER 已另行注册
+    # （mod/Data/RR_Terrain.xml）。
 ]
 
 # 壳 → 由它派生的矩阵地形（适地表复制目标）
@@ -122,8 +121,9 @@ A('     生成器：tools/gen_matrix_xml.py（从游戏原版 XML 逐列提取�
 A('     壳等价原则：每个矩阵地形的 Terrains 属性列 / Terrain_YieldChanges /')
 A('     TerrainClass_Terrains / Resource_ValidTerrains / Feature_ValidTerrains')
 A('     均照抄其壳地形；产出/移动力/魅力与壳逐值相等，本轮不改任何机制数值。')
-A('     海洋三级具名化追加：TERRAIN_RR_DEEPSEA 借 TERRAIN_OCEAN 壳、')
-A('     TERRAIN_RR_SHALLOW 借 TERRAIN_COAST 壳，与陆地卡同一壳等价纪律。')
+A('     理由（M8 清理，2026-10-02）：水具名卡 TERRAIN_RR_DEEPSEA/RR_SHALLOW')
+A('     已删除（M7 定论引擎浅水 3D 路径不解析自定义水地形，水面直落原版')
+A('     OCEAN/COAST），本文件现只含 14 张陆地形态×地带卡。')
 A('     适地表复制来源：Base + Expansion1 + Expansion2（去重）；玛雅等可选')
 A('     DLC 资源（MAIZE/HONEY 等）不复制——引用不存在资源类型有整表加载失败风险。')
 A('     ============================================================================ -->')

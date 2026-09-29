@@ -147,18 +147,83 @@
 			<Text>雪线主脊</Text>
 		</Row>
 
-		<!-- 海洋三级具名化（深海 ≤-2000m / 浅海 -2000~-200m；海岸·水面保持原版"海岸"） -->
-		<Row Tag="LOC_TERRAIN_RR_DEEPSEA_NAME" Language="en_US">
-			<Text>Deep Sea</Text>
+		<!-- 理由（M8 清理，2026-10-02）：深海/浅海具名卡已删（水面直落原版
+		     OCEAN/COAST，M7 引擎级定论），LOC_TERRAIN_RR_DEEPSEA/RR_SHALLOW_NAME
+		     四行随之作废移除。 -->
+
+		<!-- M8 河流命名：12 条中式河名（注册于 Data/RR_Rivers.xml 的 NamedRivers
+		     表）。英文用拼音+River 惯例（对照原版 NAMED_RIVER_ABUKUMA_RIVER）。 -->
+		<Row Tag="LOC_NAMED_RIVER_RR_HEISHUI_NAME" Language="en_US">
+			<Text>Heishui River</Text>
 		</Row>
-		<Row Tag="LOC_TERRAIN_RR_DEEPSEA_NAME" Language="zh_Hans_CN">
-			<Text>深海</Text>
+		<Row Tag="LOC_NAMED_RIVER_RR_HEISHUI_NAME" Language="zh_Hans_CN">
+			<Text>黑水河</Text>
 		</Row>
-		<Row Tag="LOC_TERRAIN_RR_SHALLOW_NAME" Language="en_US">
-			<Text>Shallow Sea</Text>
+		<Row Tag="LOC_NAMED_RIVER_RR_BAILANG_NAME" Language="en_US">
+			<Text>Bailang River</Text>
 		</Row>
-		<Row Tag="LOC_TERRAIN_RR_SHALLOW_NAME" Language="zh_Hans_CN">
-			<Text>浅海</Text>
+		<Row Tag="LOC_NAMED_RIVER_RR_BAILANG_NAME" Language="zh_Hans_CN">
+			<Text>白浪河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_QINGHE_NAME" Language="en_US">
+			<Text>Qing River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_QINGHE_NAME" Language="zh_Hans_CN">
+			<Text>清河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_YUANJIANG_NAME" Language="en_US">
+			<Text>Yuan River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_YUANJIANG_NAME" Language="zh_Hans_CN">
+			<Text>沅江</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_LANHE_NAME" Language="en_US">
+			<Text>Lan River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_LANHE_NAME" Language="zh_Hans_CN">
+			<Text>澜河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_SHAHE_NAME" Language="en_US">
+			<Text>Sha River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_SHAHE_NAME" Language="zh_Hans_CN">
+			<Text>沙河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_RUISHUI_NAME" Language="en_US">
+			<Text>Rui River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_RUISHUI_NAME" Language="zh_Hans_CN">
+			<Text>汭水</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_JINGHE_NAME" Language="en_US">
+			<Text>Jing River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_JINGHE_NAME" Language="zh_Hans_CN">
+			<Text>泾河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_ZHUHE_NAME" Language="en_US">
+			<Text>Zhu River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_ZHUHE_NAME" Language="zh_Hans_CN">
+			<Text>渚河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_LONGJIANG_NAME" Language="en_US">
+			<Text>Long River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_LONGJIANG_NAME" Language="zh_Hans_CN">
+			<Text>泷江</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_KUANGSHUI_NAME" Language="en_US">
+			<Text>Kuang River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_KUANGSHUI_NAME" Language="zh_Hans_CN">
+			<Text>洭水</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_LIHE_NAME" Language="en_US">
+			<Text>Li River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_LIHE_NAME" Language="zh_Hans_CN">
+			<Text>澧河</Text>
 		</Row>
 
 		<!-- M2.5 Layer3 微地貌特征卡名 -->

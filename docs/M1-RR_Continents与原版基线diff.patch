@@ -1,5 +1,5 @@
 --- /tmp/rrmap_m1/Continents_baseline.lua	2026-09-28 22:34:07
-+++ mod/Maps/RR_Continents.lua	2026-09-29 21:34:51
++++ mod/Maps/RR_Continents.lua	2026-09-29 22:44:15
 @@ -1,4 +1,20 @@
  ------------------------------------------------------------------------------
 +-- 文件:    RR_Continents.lua
@@ -11,7 +11,7 @@
 +--            T2 确定性连续海拔场（米）→ MapConfiguration 分块持久化（双保险：纯种子可重算）
 +--            T3 形态层 8 类分类 + 山麓带落地（邻山平地强制丘陵，照官方 Tilted_Axis 写法）
 +--            T4 自定义 1:4 尺寸（MAPSIZE_RR_STD14，168×108）配套查询兜底
-+--            M2  水文分级：大河水面（TERRAIN_RR_RIVER）+ 急流/漫滩/三角洲标记
++--            M2  水文分级：河面（TERRAIN_RR_RIVER）+ 急流/漫滩/三角洲标记
 +--            M2.5 Layer3 微地貌特征卡（三角洲/急流/漫滩 + 绿洲/沼泽原版直放）
 +--            M3  形态×地带具名矩阵地形卡：RR_ApplyTerrainMatrix（14 卡，壳等价，
 +--                惰性解析回落原版壳，见 Data/RR_Terrains_Matrix.xml）
@@ -21,7 +21,7 @@
  --	FILE:	 Continents.lua
  --	AUTHOR:  
  --	PURPOSE: Base game script - Produces widely varied continents.
-@@ -25,6 +41,68 @@
+@@ -25,6 +41,99 @@
  local world_age_normal = 3;
  local world_age_old = 2;
  
@@ -39,11 +39,28 @@
 +-- 理由：旧值 深海≤-2000 / 浅海 -2000~-200（策划案 1.2 原始分界）在 168×108
 +-- 实图上导致海岸+浅海占比过大、深海隔不开大陆（用户实测反馈）。新值把深海
 +-- 分界抬到 -800、浅海上限收到 -100——大陆之间呈深蓝，近岸只留一小圈浅色。
-+-- 海拔公式振幅（-25~-5825m）未动，只改分类阈值；陆侧阈值（200/500/3500）不变。
++-- 海拔公式海洋振幅（-25~-5825m）未动，只改分类阈值；陆侧阈值（200/500/3500）
++-- 曾维持不变，M8 起按用户实测（山河占绝大部分陆地）另行调参，见下方
++-- RR_FORM_* 常量注释。
 +-- 诚实标注：本地无法实机验证比例，新图请以 "[RRMap M1] 海洋分级阈值" 与
 +-- "形态分布" 两条探针 + 3D 观感复核；不满意只改这两个常量即可。
 +local RR_SEA_DEEP_ELEV = -800;			-- 深海分界（旧值 -2000）
 +local RR_SEA_SHALLOW_MAX_ELEV = -100;	-- 浅海上限（旧值 -200）；>-100 的离岸浅水归海岸观感
++
++-- RR M8 陆侧形态分界（用户实测调参：山河占绝大部分陆地、平原几乎消失）：
++-- 理由（山地门槛 500→700）：山麓带（200~山地门槛）随之加宽一档，山体
++-- 边缘更多格子落入山麓/隆起过渡，山体观感收窄；
++-- 理由（主脊门槛 3500→2800）：雪线观感由 RR_ApplySnowRidge 换肤保证
++-- （主脊形态→雪顶皮肤），门槛下移只让雪核略增、山体高程带收窄，不取消
++-- 雪线。海拔振幅同步压低约 25%（见 RR_BuildElevationAndForms 公式注释），
++-- 压低邻格高差 → 判定"隆起"（邻格高差≥50m）的格子减少、低地增多。
++-- 目标配比（以 "[RRMap M1] 形态分布" 探针复核）：低地+隆起 ≥ 陆地 60%，
++-- 山地+主脊 ≤ 陆地 15%。
++-- 诚实标注：山地/主脊占比的上限由分形山地地块数决定（plot type 在
++-- GeneratePlotTypes 已定稿），本组参数主要收窄山体高程带、加宽低地带，
++-- 若探针仍超标，下一步须动分形山地密度（world_age/tectonics 参数）。
++local RR_FORM_MOUNTAIN_MIN_ELEV = 700;	-- 山地门槛（旧值 500）
++local RR_FORM_RIDGE_MIN_ELEV = 2800;	-- 主脊门槛（旧值 3500；雪线观感不变）
 +
 +-- RR M2 水文分级：参数与状态。
 +-- 理由（取值）：168×108（1:4 精细度）下的初始梯度，策划案 2.3"数值为默认倾向，
@@ -67,6 +84,20 @@
 +local RR_MARK_RAPIDS = 1;			-- g_RR_riverMark 位：急流/瀑布
 +local RR_MARK_FLOODPLAIN = 2;		-- 位：河漫滩
 +local RR_MARK_DELTA = 4;			-- 位：三角洲
++-- RR M8 河流命名：参数与状态。
++-- 理由（取名门槛）：与分级阈值对齐——R2+（连通河段 ≥8 格且通海）即"大河"，
++-- 大河才配专名（小河保持隐式边缘河，策划案"河像湖海一样带名字"面向大河）。
++-- 理由（命名池 12 条）：168×108 图实测流域数十个，R2+ 一般在 10~20 个，
++-- 12 条中式河名（Data/RR_Rivers.xml 注册，NamedRivers 表）按规模从大到小
++-- 依次分配；超出 12 个的大河无名为预期行为（探针会打印分配/未分配数）。
++local RR_RIVER_NAME_MIN_SIZE = RR_RIVER_MIN_SIZE_R2;	-- 配名流域最小格数（=R2 门槛）
++local RR_RIVER_NAMES = {
++	"NAMED_RIVER_RR_HEISHUI", "NAMED_RIVER_RR_BAILANG", "NAMED_RIVER_RR_QINGHE",
++	"NAMED_RIVER_RR_YUANJIANG", "NAMED_RIVER_RR_LANHE", "NAMED_RIVER_RR_SHAHE",
++	"NAMED_RIVER_RR_RUISHUI", "NAMED_RIVER_RR_JINGHE", "NAMED_RIVER_RR_ZHUHE",
++	"NAMED_RIVER_RR_LONGJIANG", "NAMED_RIVER_RR_KUANGSHUI", "NAMED_RIVER_RR_LIHE",
++};
++local g_RR_riverName = nil;			-- 河名表：[y*g_iW+x+1] = RR_RIVER_NAMES 索引(1..12)，M8 生成
 +local g_RR_river = nil;				-- 河流等级表：[y*g_iW+x+1] = 0 无 / 1 R1 / 2 R2 / 3 R3 / 4 R4
 +local g_RR_riverMark = nil;			-- 水文标记表：位组合（RR_MARK_*）
 +
@@ -90,7 +121,7 @@
  -------------------------------------------------------------------------------
  function GenerateMap()
  	print("Generating Continents Map");
-@@ -33,6 +111,10 @@
+@@ -33,6 +142,10 @@
  	-- Set globals
  	g_iW, g_iH = Map.GetGridSize();
  	g_iFlags = TerrainBuilder.GetFractalFlags();
@@ -101,7 +132,7 @@
  	local temperature = MapConfiguration.GetValue("temperature"); -- Default setting is Temperate.
  	if temperature == 4 then
  		temperature  =  1 + TerrainBuilder.GetRandomNumber(3, "Random Temperature- Lua");
-@@ -51,6 +133,8 @@
+@@ -51,6 +164,8 @@
  	end
  
  	plotTypes = GeneratePlotTypes(world_age);
@@ -110,7 +141,7 @@
  	terrainTypes = GenerateTerrainTypes(plotTypes, g_iW, g_iH, g_iFlags, false, temperature);
  	ApplyBaseTerrain(plotTypes, terrainTypes, g_iW, g_iH);
  
-@@ -64,27 +148,80 @@
+@@ -64,27 +179,80 @@
  	AddTerrainFromContinents(plotTypes, terrainTypes, world_age, g_iW, g_iH, iContinentBoundaryPlots);
  
  	AreaBuilder.Recalculate();
@@ -193,7 +224,7 @@
  	
  	resourcesConfig = MapConfiguration.GetValue("resources");
  	local startConfig = MapConfiguration.GetValue("start");-- Get the start config
-@@ -93,6 +230,7 @@
+@@ -93,6 +261,7 @@
  		START_CONFIG = startConfig,
  	};
  	local resGen = ResourceGenerator.Create(args);
@@ -201,7 +232,7 @@
  
  	print("Creating start plot database.");
  	
-@@ -106,8 +244,13 @@
+@@ -106,8 +275,13 @@
  		START_CONFIG = startConfig,
  	};
  	local start_plot_database = AssignStartingPlots.Create(args)
@@ -215,7 +246,7 @@
  end
  
  -------------------------------------------------------------------------------
-@@ -140,6 +283,9 @@
+@@ -140,6 +314,9 @@
  	else
  		water_percent = TerrainBuilder.GetRandomNumber(sea_level_high - sea_level_low, "Random Sea Level - Lua") + sea_level_low  + 1;
  	end
@@ -225,7 +256,7 @@
  
  	-- Set values for hills and mountains according to World Age chosen by user.
  	local adjustment = world_age;
-@@ -244,6 +390,10 @@
+@@ -244,6 +421,10 @@
  		-- print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
  		-- print(".");
  	end
@@ -236,7 +267,7 @@
  	
  	local args = {};
  	args.world_age = world_age;
-@@ -664,4 +814,1116 @@
+@@ -664,4 +845,1192 @@
  	end
  
  
@@ -261,18 +292,23 @@
 +--   陆侧归一 u = clamp((h - thr) / thr, 0, 1)（海岸带 u≈0，分形高处 u→1）
 +--   水侧归一 d = clamp((thr - h) / thr, 0, 1)（海岸线 d=0，远洋 d→1）
 +--
-+--   平地（PLOT_TYPE_LAND）  elev =   5 + 180*u          →    5~185m（<200m 低地）
++--   平地（PLOT_TYPE_LAND）  elev =   5 + 135*u          →    5~140m（<200m 低地）
 +--     其中沿海平地（IsCoastalLand）额外压到 ≤50m（海岸≈0）
-+--   丘陵（PLOT_TYPE_HILLS）  elev = 120 + 360*u          →  120~480m（起伏带）
-+--   山地（PLOT_TYPE_MOUNTAIN）elev = 1500 + 2000*u       → 1500~3500m（策划案山地带）
-+--     主脊升级：u>0.92 或 ≥5 个邻格为山地（山体内部）→ elev = 3500 + 1000*u（>3500m）
++--   丘陵（PLOT_TYPE_HILLS）  elev = 120 + 270*u          →  120~390m（起伏带）
++--   山地（PLOT_TYPE_MOUNTAIN）elev = 1500 + 1500*u       → 1500~3000m（策划案山地带）
++--     主脊升级：u>0.92 或 ≥5 个邻格为山地（山体内部）→ elev = 2800 + 1000*u
++--     （旧值 3500+1000u；主脊门槛随 RR_FORM_RIDGE_MIN_ELEV 下移，雪线观感
++--     由 RR_ApplySnowRidge 换肤保证，见该函数注释）
 +--   海洋                     elev = -25 - 5800*d^1.3    →  -25m（岸）~-5825m（深海沟）
 +--     水深分级负值（M6 实测调参后）：海岸≈0、浅海 -800~-100、深海 ≤-800
 +--     （旧分界：浅海 -2000~-200、深海 ≤-2000——浅海带过宽，见常量区注释）
 +--
-+--   参数选取理由：振幅对齐策划案 1.2 陆侧阈值（200/500/3500）；海洋分级阈值
-+--   自策划案值（-200/-2000）调整为 -100/-800（M6 实测比例失衡调参，理由见
-+--   常量区注释），公式幂 1.3 不变。u 用 (h-thr)/thr 是因为陆侧分形高度典型
++--   参数选取理由：陆侧振幅 M8 起整体压低约 25%（平地 180→135、丘陵 360→270、
++--   山地 2000→1500、主脊基数 3500→2800）——用户实测"山河占绝大部分陆地、
++--   平原几乎没了"：振幅决定邻格高差，而"隆起"形态由邻格高差≥50m 判定，
++-- 压低振幅 → 隆起/山麓减少、低地增多；山地形态分界 500→700、主脊 3500→2800
++-- 同步收窄山体高程带（RR_FORM_* 常量区注释）。海洋振幅未动（M6 已定稿）。
++--   u 用 (h-thr)/thr 是因为陆侧分形高度典型
 +--   区间为 [thr, 2*thr]，归一后覆盖 0~1；海洋幂 1.3 让浅段（大陆架）过渡
 +--   更缓——分级观感现由分类阈值主导，幂值不再肩负重任。
 +--
@@ -281,13 +317,14 @@
 +--       否则 elev ≤ -800 → 深海；-800 < elev ≤ -100 → 浅海；
 +--       elev > -100（离岸极浅水）→ 海岸/水面观感（M6：不建卡，保持原版
 +--       COAST 壳，构成"近岸一小圈浅色"）。
-+--   陆：elev > 3500 → 主脊；500~3500 → 山地；200~500 → 山麓；
++--   陆：elev > 2800 → 主脊；700~2800 → 山地；200~700 → 山麓；
 +--       <200 且邻格最大高差 ≥50m → 隆起（岗地/丘陵）；否则 → 低地。
 +-------------------------------------------------------------------------------
 +
 +function RR_CountMountainNeighbors(x, y)
 +	-- 理由（T2 主脊判定）：统计 6 邻格中 PLOT_TYPE_MOUNTAIN 的数量，
-+	-- 山体内部的格子升级为主脊（>3500m），山脉边缘保持 1500~3500m 山地。
++	-- 山体内部的格子升级为主脊（>RR_FORM_RIDGE_MIN_ELEV），山脉边缘保持
++	-- 1500~2800m 山地（M8 起；旧 1500~3500，见常量区注释）。
 +	-- 理由（API 选型）：建图上下文的 plot userdata 不暴露 GetPlotType/SetPlotType
 +	-- （原版地图脚本中这两方法只出现在 allow_mountains_on_coast==false 的死分支，
 +	-- 活跃代码一律用 IsMountain/IsHills，见 TerrainGenerator.lua GetNumberAdjacentMountains；
@@ -351,9 +388,9 @@
 +			return "海岸/水面";
 +		end
 +	end
-+	if elev > 3500 then
++	if elev > RR_FORM_RIDGE_MIN_ELEV then
 +		return "主脊";
-+	elseif elev >= 500 then
++	elseif elev >= RR_FORM_MOUNTAIN_MIN_ELEV then
 +		return "山地";
 +	elseif elev >= 200 then
 +		return "山麓";
@@ -398,14 +435,22 @@
 +				-- RR_CountMountainNeighbors 头部注释）。
 +				if pPlot:IsMountain() then
 +					if u > 0.92 or RR_CountMountainNeighbors(x, y) >= 5 then
-+						elev = 3500 + 1000 * u; -- 主脊带
++						-- 理由（M8 山体收窄）：主脊基数 3500→2800（与形态门槛
++						-- RR_FORM_RIDGE_MIN_ELEV 同步）；振幅 1000 未动——雪核
++						-- 内部高程带 2800~3800m，雪线观感由换肤保证。
++						elev = 2800 + 1000 * u; -- 主脊带
 +					else
-+						elev = 1500 + 2000 * u; -- 山地带
++						-- 理由（M8 陆地起伏 -25%）：山地振幅 2000→1500，
++						-- 山体高程带收窄为 1500~3000m（旧 1500~3500）。
++						elev = 1500 + 1500 * u; -- 山地带
 +					end
 +				elseif pPlot:IsHills() then
-+					elev = 120 + 360 * u;
++					-- 理由（M8 陆地起伏 -25%）：丘陵振幅 360→270（120~390m）。
++					elev = 120 + 270 * u;
 +				else
-+					elev = 5 + 180 * u;
++					-- 理由（M8 陆地起伏 -25%）：平地振幅 180→135（5~140m），
++					-- 低地格更多、邻格高差收窄 → 隆起判定（≥50m）更难触发。
++					elev = 5 + 135 * u;
 +					if pPlot:IsCoastalLand() then
 +						-- 海岸≈0：沿海平地压到 50m 以下
 +						local cap = 30 + 20 * u;
@@ -475,7 +520,8 @@
 +
 +function RR_ApplyFoothills()
 +	-- 理由（T3 最小可见改动）：把策划案"山麓带"落到原版枚举上——与山地相邻的
-+	-- 原版平地强制改为丘陵，使 主脊(>3500m)→山麓→低地 的过渡带在游戏中肉眼可见。
++	-- 原版平地强制改为丘陵，使 主脊(>RR_FORM_RIDGE_MIN_ELEV)→山麓→低地
++	-- 的过渡带在游戏中肉眼可见（M8 起主脊门槛 2800，旧 3500）。
 +	-- 只动这一步：不改分形、不改山地本体、不重构流程。
 +	-- 理由（API 选型，M1 首测修正）：建图上下文 plot userdata 不暴露
 +	-- GetPlotType/SetPlotType（原版仅死分支引用；活跃代码用 IsMountain/IsHills/
@@ -506,7 +552,8 @@
 +						delayed = delayed + 1;
 +					end
 +					-- 理由：海拔/形态表同步到丘陵带，保证后续打印与持久化一致。
-+					g_RR_elevation[i] = 200 + (g_RR_elevation[i] or 0) * 0.5; -- 200~300m 山麓
++					-- M8 起平地振幅 -25%（5~140m），山麓落点 200~270m（旧 200~300m）。
++					g_RR_elevation[i] = 200 + (g_RR_elevation[i] or 0) * 0.5; -- 山麓带
 +					g_RR_form[i] = "山麓";
 +					converted = converted + 1;
 +				end
@@ -522,7 +569,8 @@
 +
 +function RR_ApplySnowRidge()
 +	-- 理由（M1.5 可见性补完，M2 二测用户点破"大片无法通行山脉无层次"）：
-+	-- 主脊带（>3500m，形态层判定）换雪山地形变体 TERRAIN_SNOW_MOUNTAIN
++	-- 主脊带（>RR_FORM_RIDGE_MIN_ELEV，形态层判定；M8 起 2800m，旧 3500m）
++	-- 换雪山地形变体 TERRAIN_SNOW_MOUNTAIN
 +	-- （原版雪顶皮肤）——高海拔山系呈现雪线核心，与外围山地肉眼分层。
 +	-- 只改地形变体不改地块类型（仍为不可通行山脉），对河流/特征/资源零扰动。
 +	-- 理由（M3 具名卡片化）：雪顶皮肤升级为具名卡 TERRAIN_RR_RIDGE"雪线主脊"，
@@ -645,7 +693,7 @@
 +
 +
 +-------------------------------------------------------------------------------
-+-- RR M2：水文分级与大河水面
++-- RR M2：水文分级与河面
 +-- 依据：
 +--   陆改水机制 = AddLakes 先例（RiversLakes.lua L387 SetTerrainType(COAST)
 +--                + AreaBuilder.Recalculate()）。
@@ -682,6 +730,61 @@
 +	end
 +end
 +
++-------------------------------------------------------------------------------
++-- RR M8：河流命名——让河像湖海一样带名字（策划案精神：水系具名化）。
++-- 引擎写名 API 查证结论（决定性证据，GameCore_XP2_FinalRelease.map 导出表）：
++--   RiverManager 暴露给 Lua 的全部 18 个绑定均为读操作（lGetRiverName/
++--   lGetRiverTypes/lGetRiverByID/lEnumerateRivers/lCanBeFlooded 等），
++--   【无任何 Set/Add 绑定】；画河沿的 TerrainBuilder.SetWOfRiver/NWOfRiver/
++--   NEOfRiver 只接 (plot, bool)，无名字参数；唯一命名写入口 EditRiver 挂
++--   在 IWorldBuilderMapManager（世界编辑器上下文），地图生成脚本不可达。
++--   => 生成阶段无引擎 API 可把 NamedRiverType 写到河道地块边缘。
++-- 降级方案（本函数）：名字数据存 g_RR_riverName 表（每河道格一个索引）
++--   + 持久化 MapConfiguration（RR_PersistRiverData，十六进制单字符/格）
++--   + 探针打印分配结果；悬停 UI 显示留待后续里程碑（读持久化数据覆盖
++--   PlotTooltip，或引擎未来开放写 API 时启用 engineApi 检测钩子）。
++-------------------------------------------------------------------------------
++
++function RR_AssignRiverNames(nameCands)
++	-- 理由：按流域规模从大到小依次配名（RR_RIVER_NAMES 常量区注释）；
++	-- 全程无随机数消耗（排序确定性：规模并列时 sort 不稳定——并列次序
++	-- 不同不影响正确性，只影响同名规模的两个流域谁拿哪个名字，均为
++	-- 中式河名池内互换，可接受）。
++	g_RR_riverName = {};
++	if nameCands == nil or #nameCands == 0 then
++		print("[RRMap M8] 河流命名: 无 R2+ 大流域，不分配河名");
++		return;
++	end
++	table.sort(nameCands, function(a, b) return a.size > b.size; end);
++	-- 理由（engineApi 探针）：检测未来引擎版本是否开放写 API——当前
++	-- 恒为 "none"（查证结论见块头注释）；若未来存在则在此接引擎写调用。
++	local engineApi = "none";
++	if RiverManager ~= nil and RiverManager.SetRiverType ~= nil then
++		engineApi = "RiverManager.SetRiverType(存在,未接线)";
++	end
++	local assigned, parts = 0, {};
++	for idx, cand in ipairs(nameCands) do
++		if idx > #RR_RIVER_NAMES then
++			break; -- 理由：河名池 12 条用尽，剩余大流域无名为预期行为
++		end
++		local nameType = RR_RIVER_NAMES[idx];
++		-- 理由（数据落格）：名字索引挂到流域全部河道格——未来悬停任意
++		-- 河段均可显示全流域共享的专名（与原版"河按流域整体命名"同语义）。
++		for k = 1, cand.size do
++			g_RR_riverName[cand.plots[k] + 1] = idx;
++		end
++		assigned = assigned + 1;
++		table.insert(parts, string.format("%s(R%d,%d格)", nameType, cand.cls, cand.size));
++	end
++	print(string.format("[RRMap M8] 河流命名: 候选 %d 个, 分配 %d 条 (引擎写API=%s, 数据已存 g_RR_riverName)",
++		#nameCands, assigned, engineApi));
++	print("[RRMap M8] 河名分配(按规模): " .. table.concat(parts, " "));
++	if #nameCands > #RR_RIVER_NAMES then
++		print(string.format("[RRMap M8] 河流命名: %d 个大流域超出 12 条河名池未分配（预期行为）",
++			#nameCands - #RR_RIVER_NAMES));
++	end
++end
++
 +function RR_ClassifyAndConvertRivers(plotTypes, terrainTypes)
 +	-- 理由（插入点见 GenerateMap）：AddRivers/AddLakes 后、AddFeatures 前。
 +	if g_RR_elevation == nil or g_RR_form == nil then
@@ -699,7 +802,7 @@
 +	-- 第零遍：孤儿小湖回填（理由：AddLakes 随机撒湖与河网无关，出现"水点无河"
 +	-- 的违和——M2 二测用户反馈；策划案轻量因果要求水系连通。与河相连的
 +	-- 小湖保留（首测好评的景观）。判定：小湖=水格且所属 Area 格数 ≤8
-+	-- （海湾/大河水面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
++	-- （海湾/河面所属面积极大，天然排除）；无河=周边 2 格内无 IsRiver 格。
 +	local riverTerrainType0 = g_TERRAIN_TYPE_COAST;
 +	local okRT0, rtIdx0 = pcall(function()
 +		return GetGameInfoIndex("Terrains", "TERRAIN_COAST");
@@ -822,6 +925,8 @@
 +		pcall(function() TerrainBuilder.SetNWOfRiver(p, false); end);
 +		pcall(function() TerrainBuilder.SetNEOfRiver(p, false); end);
 +	end
++	-- M8 河流命名：配名候选池（R2+ 大流域，第三遍内填入）。
++	local nameCands = {};
 +	for r, c in pairs(comps) do
 +		stats.comps = stats.comps + 1;
 +		local cls = 1;
@@ -851,8 +956,15 @@
 +			for k = 1, c.size do
 +				g_RR_river[c.plots[k] + 1] = cls;
 +			end
++			-- 理由（M8 河流命名候选）：R2+ 且通海的大流域进入配名池，
++			-- 第三遍半按规模排序依次分配河名（见 RR_AssignRiverNames）。
++			if cls >= 2 and c.size >= RR_RIVER_NAME_MIN_SIZE then
++				table.insert(nameCands, {size = c.size, cls = cls, plots = c.plots});
++			end
 +		end
 +	end
++
++	RR_AssignRiverNames(nameCands);
 +
 +	-- 第四遍：河道转化判定（先判定完全集，再施工——第五遍的
 +	-- IsCoastalLand 语义必须是施工前真值，否则三角洲判不出来）
@@ -1032,9 +1144,11 @@
 +	local n = g_iW * g_iH;
 +	local classParts = {};
 +	local markParts = {};
++	local nameParts = {};	-- M8 河名：值域 0~12，单字符十六进制恰好一格一位
 +	for i = 1, n do
 +		classParts[i] = tostring(g_RR_river[i] or 0);
 +		markParts[i] = tostring(g_RR_riverMark[i] or 0);
++		nameParts[i] = string.format("%X", (g_RR_riverName ~= nil and g_RR_riverName[i]) or 0);
 +	end
 +	local chunk = 4096;
 +	local function writeChunks(prefix, s)
@@ -1058,7 +1172,9 @@
 +	end
 +	local okC, chC = writeChunks("RR_River", table.concat(classParts));
 +	local okM, chM = writeChunks("RR_RiverMark", table.concat(markParts));
-+	print(string.format("[RRMap M2] 水文持久化: 等级 %d/%d 块, 标记 %d/%d 块", okC, chC, okM, chM));
++	local okN, chN = writeChunks("RR_RiverName", table.concat(nameParts));
++	print(string.format("[RRMap M2] 水文持久化: 等级 %d/%d 块, 标记 %d/%d 块, 河名 %d/%d 块",
++		okC, chC, okM, chM, okN, chN));
 +end
 +
 +function RR_PlaceLayer3Features()
@@ -1111,7 +1227,7 @@
 +			if pPlot:GetFeatureType() == g_FEATURE_NONE then
 +				local t = pPlot:GetTerrainType();
 +				if t == g_TERRAIN_TYPE_DESERT then
-+					-- 绿洲：平地荒漠 且 邻河（小河边缘河或大河水面都算水源）
++					-- 绿洲：平地荒漠 且 邻河（小河边缘河或河面都算水源）
 +					if pPlot:IsRiver() then
 +						if tryPlace(pPlot, oasisId) then placedOasis = placedOasis + 1; end
 +					else
@@ -1157,10 +1273,11 @@
 +--   (b) 极地低地（TERRAIN_SNOW/SNOW_HILLS）不建卡，保持原版"雪原"；
 +--   (c) terrainTypes 台账（GenerateTerrainTypes 返回值）在本函数后不再刷新，
 +--       后续 AddCliffs 等只按陆/水大类读它，矩阵改动不跨陆水边界，安全；
-+--   (d) 海洋三级具名化：深海/浅海形态 → TERRAIN_RR_DEEPSEA/RR_SHALLOW 具名水卡
-+--       （壳等价：分别借 TERRAIN_OCEAN/TERRAIN_COAST 壳）；"海岸/水面"形态保持
-+--       原版 COAST 不建卡，大河水面 TERRAIN_RR_RIVER 由 RR_ClassifyAndConvertRivers
-+--       另行处理，两者互不动。
++--   (d) 海洋分级（M8 清理后）：深海/浅海形态水格直落原版 OCEAN/COAST——
++--       M7 定论引擎浅水 3D 路径不解析自定义水地形（棕色证据链见
++--       docs/水面棕色3D-根因调查.md），具名水卡 TERRAIN_RR_DEEPSEA/
++--       RR_SHALLOW 已删（含 XML/LOC/artdef 全链）；河面 TERRAIN_RR_RIVER
++--       由 RR_ClassifyAndConvertRivers 另行处理，两者互不动。
 +-------------------------------------------------------------------------------
 +
 +function RR_ApplyTerrainMatrix()
@@ -1228,20 +1345,10 @@
 +		end
 +	end
 +
-+	-- 海洋三级具名化（M6 实测调参后：深海 ≤-800m / 浅海 -800~-100m / 海岸·水面≈0m；
-+	-- 旧分界 -2000/-200 见常量区注释）。
-+	-- 水形态度卡表：形态 → {具名水卡名, 壳地形名}。壳名仅作解析失败回落的对照。
-+	-- M7 根因定论：浅水具名卡（RR_SHALLOW）3D 棕色为引擎浅水路径不解析自定义
-+	-- 地形条目（证据链 docs/水面棕色3D-根因调查.md）；若所有者裁决走替代方案 a，
-+	-- 本行改为 {"TERRAIN_COAST", "TERRAIN_COAST"} 即恢复 3D 蓝色。深海卡
-+	-- （RR_DEEPSEA）不受此限，保留具名。
-+	-- 理由（回落语义）：具名卡解析失败(-1)时回落写壳地形——深海回落 OCEAN 对该格
-+	-- 是恒等写（现状即 OCEAN，零损失）；浅海回落 COAST 会把该格升级为浅水
-+	-- （ShallowWater/Appeal 列随壳变化），仅在数据库注册整体失败时发生（届时陆地
-+	-- 具名卡同样缺失），属降级可玩性兜底而非常态路径。
-+		-- 理由（M7 引擎限制，见 docs/水面棕色3D-根因调查.md）：浅水 3D 路径不解析
-+		-- Mod 自定义水地形一律棕（深水也如此，用户实机纠正）：水全部直落原版
-+		-- OCEAN/COAST 保 3D 蓝色；深海/浅海/大河的具名走地块属性+悬停UI覆盖回收。
++	-- 海洋分级（M8 清理后）：深海/浅海形态的水格直落原版 OCEAN/COAST
++	-- （旧分界 -2000/-200 见常量区注释）。M7 定论：引擎浅水 3D 路径不解析
++	-- mod 自定义水地形（棕色证据链见 docs/水面棕色3D-根因调查.md）；具名水卡
++	-- TERRAIN_RR_DEEPSEA/RR_SHALLOW 已全链删除，水形态不再写具名卡。
 +	local waterMatrix = {
 +		["深海"] = {"TERRAIN_OCEAN", "TERRAIN_OCEAN"},
 +		["浅海"] = {"TERRAIN_COAST", "TERRAIN_COAST"},

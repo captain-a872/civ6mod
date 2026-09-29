@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ============================================================================
+     河流命名系统（M8）：12 条中式河名注册——让河像湖海一样带名字。
+     原版机制查证（GameCore_XP2_FinalRelease.map 导出表 + DLC/Expansion2 数据实证）：
+       具名河流表 = NamedRivers（schema 见 DLC/Expansion2/Data/Expansion2_Schema.sql
+       L562，仅 GS 扩展注册该表）；Types 行 Kind="KIND_NAMED_RIVER"（原版范例
+       NAMED_RIVER_NILE）；悬停水格边缘显示河名由 UI 侧 RiverManager.GetRiverName
+       (pPlot) 驱动（PlotTooltip_Expansion2.lua L19/L199-200）。
+     Lua 侧写入 API 查证结论（决定性证据：GameCore_XP2_FinalRelease.map 中
+     IMapRiverManager 的全部 18 个 Lua 绑定——lGetRiverName/lGetRiverTypes/
+     lGetRiverByID/lEnumerateRivers 等——纯读，无任何 Set/Add 绑定；
+     写河沿的 TerrainBuilder.SetWOfRiver/NWOfRiver/NEOfRiver 只接 (plot,bool)
+     无名字参数；命名写入口 EditRiver 只挂在 IWorldBuilderMapManager 即
+     世界编辑器上下文，地图生成脚本不可达）：
+       地图生成阶段【无法】把 NamedRiverType 写到河道——本文件注册的数据
+       仅供 GameInfo.NamedRivers 查询与未来 UI 覆盖显示使用；
+       RR_Continents.lua 按流域规模把河名分配到 g_RR_riverName 表并持久化
+       探针（降级方案，见该文件 RR_AssignRiverNames 头注释）。
+     诚实标注：NamedRiverCivilizations（河名↔文明关联）刻意不注册——原版
+       靠它驱动"文明建城附近河流自动命名"，关联后我们的中式河名将进入
+       全文明自动命名池（引擎行为不可控），非本里程碑意图。
+     兼容性标注：NamedRivers 表仅风云变幻(GS/Expansion2)注册；迭起兴衰(R&F)
+       下本动作的 UpdateDatabase 会整文件失败——仅损失河名注册，地图生成
+       不依赖它（pcall 兜底链），开发基线为 GS，可接受。
+     ============================================================================ -->
+<GameData>
+	<Types>
+		<Row Type="NAMED_RIVER_RR_HEISHUI" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_BAILANG" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_QINGHE" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_YUANJIANG" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_LANHE" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_SHAHE" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_RUISHUI" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_JINGHE" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_ZHUHE" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_LONGJIANG" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_KUANGSHUI" Kind="KIND_NAMED_RIVER"/>
+		<Row Type="NAMED_RIVER_RR_LIHE" Kind="KIND_NAMED_RIVER"/>
+	</Types>
+	<NamedRivers>
+		<Row NamedRiverType="NAMED_RIVER_RR_HEISHUI" Name="LOC_NAMED_RIVER_RR_HEISHUI_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_BAILANG" Name="LOC_NAMED_RIVER_RR_BAILANG_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_QINGHE" Name="LOC_NAMED_RIVER_RR_QINGHE_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_YUANJIANG" Name="LOC_NAMED_RIVER_RR_YUANJIANG_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_LANHE" Name="LOC_NAMED_RIVER_RR_LANHE_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_SHAHE" Name="LOC_NAMED_RIVER_RR_SHAHE_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_RUISHUI" Name="LOC_NAMED_RIVER_RR_RUISHUI_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_JINGHE" Name="LOC_NAMED_RIVER_RR_JINGHE_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_ZHUHE" Name="LOC_NAMED_RIVER_RR_ZHUHE_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_LONGJIANG" Name="LOC_NAMED_RIVER_RR_LONGJIANG_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_KUANGSHUI" Name="LOC_NAMED_RIVER_RR_KUANGSHUI_NAME"/>
+		<Row NamedRiverType="NAMED_RIVER_RR_LIHE" Name="LOC_NAMED_RIVER_RR_LIHE_NAME"/>
+	</NamedRivers>
+</GameData>

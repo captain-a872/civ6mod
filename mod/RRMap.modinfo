@@ -68,6 +68,11 @@
 		<UpdateDatabase id="RR_TERRAIN_MATRIX_DATA">
 			<File>Data/RR_Terrains_Matrix.xml</File>
 		</UpdateDatabase>
+		<!-- M8 河流命名：12 条中式河名注册（NamedRivers 表，仅 GS 有该表 schema，
+		     R&F 下本动作整文件失败仅损失河名，地图生成 pcall 兜底不依赖） -->
+		<UpdateDatabase id="RR_RIVERS_DATA">
+			<File>Data/RR_Rivers.xml</File>
+		</UpdateDatabase>
 		<!-- M4 地形视觉借壳（M4 二测根因修复）：artdef 文件放 ArtDefs/ 目录并列入
 		     <Files> 只是必要条件；Civ6 的 ArtDefProvider 只注册 .dep 依赖包，
 		     必须由 <UpdateArt> 动作引用 RRMap.dep，.dep 在消费者 ArtDefDependencyPaths
@@ -111,6 +116,7 @@
 		<File>Data/RR_Terrain.xml</File>
 		<File>Data/RR_Features.xml</File>
 		<File>Data/RR_Terrains_Matrix.xml</File>
+		<File>Data/RR_Rivers.xml</File>
 		<!-- M4：artdef 借壳文件，须在 ArtDefs/ 目录且列入清单；
 		     RRMap.dep 为美术依赖声明（UpdateArt 动作引用它加载上面的 artdef） -->
 		<File>ArtDefs/RR_Terrains.artdef</File>

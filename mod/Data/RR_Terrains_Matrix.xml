@@ -5,8 +5,9 @@
      壳等价原则：每个矩阵地形的 Terrains 属性列 / Terrain_YieldChanges /
      TerrainClass_Terrains / Resource_ValidTerrains / Feature_ValidTerrains
      均照抄其壳地形；产出/移动力/魅力与壳逐值相等，本轮不改任何机制数值。
-     海洋三级具名化追加：TERRAIN_RR_DEEPSEA 借 TERRAIN_OCEAN 壳、
-     TERRAIN_RR_SHALLOW 借 TERRAIN_COAST 壳，与陆地卡同一壳等价纪律。
+     理由（M8 清理，2026-10-02）：水具名卡 TERRAIN_RR_DEEPSEA/RR_SHALLOW
+     已删除（M7 定论引擎浅水 3D 路径不解析自定义水地形，水面直落原版
+     OCEAN/COAST），本文件现只含 14 张陆地形态×地带卡。
      适地表复制来源：Base + Expansion1 + Expansion2（去重）；玛雅等可选
      DLC 资源（MAIZE/HONEY 等）不复制——引用不存在资源类型有整表加载失败风险。
      ============================================================================ -->
@@ -26,8 +27,6 @@
 		<Row Type="TERRAIN_RR_FOOT_TUNDRA" Kind="KIND_TERRAIN"/>
 		<Row Type="TERRAIN_RR_MOUNTAIN" Kind="KIND_TERRAIN"/>
 		<Row Type="TERRAIN_RR_RIDGE" Kind="KIND_TERRAIN"/>
-		<Row Type="TERRAIN_RR_DEEPSEA" Kind="KIND_TERRAIN"/>
-		<Row Type="TERRAIN_RR_SHALLOW" Kind="KIND_TERRAIN"/>
 	</Types>
 	<Terrains>
 		<Row TerrainType="TERRAIN_RR_LOW_FOREST" Name="LOC_TERRAIN_RR_LOW_FOREST_NAME" MovementCost="1" InfluenceCost="1" AntiquityPriority="2"/>
@@ -44,8 +43,6 @@
 		<Row TerrainType="TERRAIN_RR_FOOT_TUNDRA" Name="LOC_TERRAIN_RR_FOOT_TUNDRA_NAME" Hills="true" MovementCost="2" InfluenceCost="2" SightModifier="1" SightThroughModifier="1" DefenseModifier="3" AntiquityPriority="3"/>
 		<Row TerrainType="TERRAIN_RR_MOUNTAIN" Name="LOC_TERRAIN_RR_MOUNTAIN_NAME" Mountain="true" MovementCost="1" InfluenceCost="3" SightModifier="2" SightThroughModifier="2" Impassable="1" Appeal="1"/>
 		<Row TerrainType="TERRAIN_RR_RIDGE" Name="LOC_TERRAIN_RR_RIDGE_NAME" Mountain="true" MovementCost="1" InfluenceCost="3" SightModifier="2" SightThroughModifier="2" Impassable="1" Appeal="1"/>
-		<Row TerrainType="TERRAIN_RR_DEEPSEA" Name="LOC_TERRAIN_RR_DEEPSEA_NAME" Water="true" MovementCost="1" InfluenceCost="1"/>
-		<Row TerrainType="TERRAIN_RR_SHALLOW" Name="LOC_TERRAIN_RR_SHALLOW_NAME" Water="true" ShallowWater="true" MovementCost="1" InfluenceCost="2" AntiquityPriority="2" Appeal="1"/>
 	</Terrains>
 	<Terrain_YieldChanges>
 		<Row TerrainType="TERRAIN_RR_LOW_FOREST" YieldType="YIELD_FOOD" YieldChange="2"/>
@@ -66,9 +63,6 @@
 		<Row TerrainType="TERRAIN_RR_FOOT_DESERT" YieldType="YIELD_PRODUCTION" YieldChange="1"/>
 		<Row TerrainType="TERRAIN_RR_FOOT_TUNDRA" YieldType="YIELD_FOOD" YieldChange="1"/>
 		<Row TerrainType="TERRAIN_RR_FOOT_TUNDRA" YieldType="YIELD_PRODUCTION" YieldChange="1"/>
-		<Row TerrainType="TERRAIN_RR_DEEPSEA" YieldType="YIELD_FOOD" YieldChange="1"/>
-		<Row TerrainType="TERRAIN_RR_SHALLOW" YieldType="YIELD_FOOD" YieldChange="1"/>
-		<Row TerrainType="TERRAIN_RR_SHALLOW" YieldType="YIELD_GOLD" YieldChange="1"/>
 	</Terrain_YieldChanges>
 	<TerrainClass_Terrains>
 		<Row TerrainClassType="TERRAIN_CLASS_GRASS" TerrainType="TERRAIN_RR_LOW_FOREST"/>
@@ -85,8 +79,6 @@
 		<Row TerrainClassType="TERRAIN_CLASS_TUNDRA" TerrainType="TERRAIN_RR_FOOT_TUNDRA"/>
 		<Row TerrainClassType="TERRAIN_CLASS_MOUNTAIN" TerrainType="TERRAIN_RR_MOUNTAIN"/>
 		<Row TerrainClassType="TERRAIN_CLASS_MOUNTAIN" TerrainType="TERRAIN_RR_RIDGE"/>
-		<Row TerrainClassType="TERRAIN_CLASS_WATER" TerrainType="TERRAIN_RR_DEEPSEA"/>
-		<Row TerrainClassType="TERRAIN_CLASS_WATER" TerrainType="TERRAIN_RR_SHALLOW"/>
 	</TerrainClass_Terrains>
 	<Resource_ValidTerrains>
 		<Row ResourceType="RESOURCE_CATTLE" TerrainType="TERRAIN_RR_LOW_FOREST"/>
@@ -98,11 +90,9 @@
 		<Row ResourceType="RESOURCE_COPPER" TerrainType="TERRAIN_RR_FOOT_STEPPE"/>
 		<Row ResourceType="RESOURCE_COPPER" TerrainType="TERRAIN_RR_RISE_TUNDRA"/>
 		<Row ResourceType="RESOURCE_COPPER" TerrainType="TERRAIN_RR_FOOT_TUNDRA"/>
-		<Row ResourceType="RESOURCE_CRABS" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row ResourceType="RESOURCE_DEER" TerrainType="TERRAIN_RR_LOW_TUNDRA"/>
 		<Row ResourceType="RESOURCE_DEER" TerrainType="TERRAIN_RR_RISE_TUNDRA"/>
 		<Row ResourceType="RESOURCE_DEER" TerrainType="TERRAIN_RR_FOOT_TUNDRA"/>
-		<Row ResourceType="RESOURCE_FISH" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row ResourceType="RESOURCE_SHEEP" TerrainType="TERRAIN_RR_RISE_DESERT"/>
 		<Row ResourceType="RESOURCE_SHEEP" TerrainType="TERRAIN_RR_FOOT_DESERT"/>
 		<Row ResourceType="RESOURCE_SHEEP" TerrainType="TERRAIN_RR_RISE_FOREST"/>
@@ -152,7 +142,6 @@
 		<Row ResourceType="RESOURCE_MARBLE" TerrainType="TERRAIN_RR_RISE_STEPPE"/>
 		<Row ResourceType="RESOURCE_MARBLE" TerrainType="TERRAIN_RR_FOOT_STEPPE"/>
 		<Row ResourceType="RESOURCE_MERCURY" TerrainType="TERRAIN_RR_LOW_STEPPE"/>
-		<Row ResourceType="RESOURCE_PEARLS" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row ResourceType="RESOURCE_SALT" TerrainType="TERRAIN_RR_LOW_DESERT"/>
 		<Row ResourceType="RESOURCE_SALT" TerrainType="TERRAIN_RR_LOW_STEPPE"/>
 		<Row ResourceType="RESOURCE_SALT" TerrainType="TERRAIN_RR_LOW_TUNDRA"/>
@@ -167,7 +156,6 @@
 		<Row ResourceType="RESOURCE_TEA" TerrainType="TERRAIN_RR_FOOT_FOREST"/>
 		<Row ResourceType="RESOURCE_TOBACCO" TerrainType="TERRAIN_RR_LOW_FOREST"/>
 		<Row ResourceType="RESOURCE_TOBACCO" TerrainType="TERRAIN_RR_LOW_STEPPE"/>
-		<Row ResourceType="RESOURCE_WHALES" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row ResourceType="RESOURCE_WINE" TerrainType="TERRAIN_RR_LOW_FOREST"/>
 		<Row ResourceType="RESOURCE_WINE" TerrainType="TERRAIN_RR_LOW_STEPPE"/>
 		<Row ResourceType="RESOURCE_ALUMINUM" TerrainType="TERRAIN_RR_LOW_DESERT"/>
@@ -192,7 +180,6 @@
 		<Row ResourceType="RESOURCE_NITER" TerrainType="TERRAIN_RR_LOW_STEPPE"/>
 		<Row ResourceType="RESOURCE_NITER" TerrainType="TERRAIN_RR_LOW_DESERT"/>
 		<Row ResourceType="RESOURCE_NITER" TerrainType="TERRAIN_RR_LOW_TUNDRA"/>
-		<Row ResourceType="RESOURCE_OIL" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row ResourceType="RESOURCE_OIL" TerrainType="TERRAIN_RR_LOW_DESERT"/>
 		<Row ResourceType="RESOURCE_OIL" TerrainType="TERRAIN_RR_LOW_TUNDRA"/>
 		<Row ResourceType="RESOURCE_URANIUM" TerrainType="TERRAIN_RR_LOW_DESERT"/>
@@ -219,14 +206,10 @@
 		<Row ResourceType="RESOURCE_ANTIQUITY_SITE" TerrainType="TERRAIN_RR_LOW_TUNDRA"/>
 		<Row ResourceType="RESOURCE_ANTIQUITY_SITE" TerrainType="TERRAIN_RR_RISE_TUNDRA"/>
 		<Row ResourceType="RESOURCE_ANTIQUITY_SITE" TerrainType="TERRAIN_RR_FOOT_TUNDRA"/>
-		<Row ResourceType="RESOURCE_SHIPWRECK" TerrainType="TERRAIN_RR_SHALLOW"/>
-		<Row ResourceType="RESOURCE_AMBER" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row ResourceType="RESOURCE_OLIVES" TerrainType="TERRAIN_RR_LOW_FOREST"/>
 	</Resource_ValidTerrains>
 	<Feature_ValidTerrains>
 		<Row FeatureType="FEATURE_FLOODPLAINS" TerrainType="TERRAIN_RR_LOW_DESERT"/>
-		<Row FeatureType="FEATURE_ICE" TerrainType="TERRAIN_RR_SHALLOW"/>
-		<Row FeatureType="FEATURE_ICE" TerrainType="TERRAIN_RR_DEEPSEA"/>
 		<Row FeatureType="FEATURE_JUNGLE" TerrainType="TERRAIN_RR_LOW_FOREST"/>
 		<Row FeatureType="FEATURE_JUNGLE" TerrainType="TERRAIN_RR_RISE_FOREST"/>
 		<Row FeatureType="FEATURE_JUNGLE" TerrainType="TERRAIN_RR_FOOT_FOREST"/>
@@ -244,7 +227,6 @@
 		<Row FeatureType="FEATURE_FOREST" TerrainType="TERRAIN_RR_FOOT_TUNDRA"/>
 		<Row FeatureType="FEATURE_OASIS" TerrainType="TERRAIN_RR_LOW_DESERT"/>
 		<Row FeatureType="FEATURE_MARSH" TerrainType="TERRAIN_RR_LOW_FOREST"/>
-		<Row FeatureType="FEATURE_BARRIER_REEF" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row FeatureType="FEATURE_CLIFFS_DOVER" TerrainType="TERRAIN_RR_RISE_STEPPE"/>
 		<Row FeatureType="FEATURE_CLIFFS_DOVER" TerrainType="TERRAIN_RR_FOOT_STEPPE"/>
 		<Row FeatureType="FEATURE_CLIFFS_DOVER" TerrainType="TERRAIN_RR_RISE_FOREST"/>
@@ -254,7 +236,6 @@
 		<Row FeatureType="FEATURE_DEAD_SEA" TerrainType="TERRAIN_RR_LOW_FOREST"/>
 		<Row FeatureType="FEATURE_DEAD_SEA" TerrainType="TERRAIN_RR_LOW_DESERT"/>
 		<Row FeatureType="FEATURE_EVEREST" TerrainType="TERRAIN_RR_MOUNTAIN"/>
-		<Row FeatureType="FEATURE_GALAPAGOS" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row FeatureType="FEATURE_KILIMANJARO" TerrainType="TERRAIN_RR_MOUNTAIN"/>
 		<Row FeatureType="FEATURE_PANTANAL" TerrainType="TERRAIN_RR_LOW_FOREST"/>
 		<Row FeatureType="FEATURE_PANTANAL" TerrainType="TERRAIN_RR_LOW_STEPPE"/>
@@ -284,7 +265,6 @@
 		<Row FeatureType="FEATURE_TSINGY" TerrainType="TERRAIN_RR_FOOT_TUNDRA"/>
 		<Row FeatureType="FEATURE_YOSEMITE" TerrainType="TERRAIN_RR_LOW_STEPPE"/>
 		<Row FeatureType="FEATURE_YOSEMITE" TerrainType="TERRAIN_RR_LOW_TUNDRA"/>
-		<Row FeatureType="FEATURE_REEF" TerrainType="TERRAIN_RR_SHALLOW"/>
 		<Row FeatureType="FEATURE_CHOCOLATEHILLS" TerrainType="TERRAIN_RR_LOW_FOREST"/>
 		<Row FeatureType="FEATURE_CHOCOLATEHILLS" TerrainType="TERRAIN_RR_RISE_FOREST"/>
 		<Row FeatureType="FEATURE_CHOCOLATEHILLS" TerrainType="TERRAIN_RR_FOOT_FOREST"/>
