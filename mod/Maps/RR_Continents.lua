@@ -1812,10 +1812,10 @@ function RR_ApplyTerrainMatrix()
 	-- （ShallowWater/Appeal 列随壳变化），仅在数据库注册整体失败时发生（届时陆地
 	-- 具名卡同样缺失），属降级可玩性兜底而非常态路径。
 		-- 理由（M7 引擎限制，见 docs/水面棕色3D-根因调查.md）：浅水 3D 路径不解析
-		-- Mod 自定义地形（棕），浅海/大河水面放弃具名直落原版 COAST 保蓝色；
-		-- 深海卡（RR_DEEPSEA）渲染正常保留具名。
+		-- Mod 自定义水地形一律棕（深水也如此，用户实机纠正）：水全部直落原版
+		-- OCEAN/COAST 保 3D 蓝色；深海/浅海/大河的具名走地块属性+悬停UI覆盖回收。
 	local waterMatrix = {
-		["深海"] = {"TERRAIN_RR_DEEPSEA", "TERRAIN_OCEAN"},
+		["深海"] = {"TERRAIN_OCEAN", "TERRAIN_OCEAN"},
 		["浅海"] = {"TERRAIN_COAST", "TERRAIN_COAST"},
 	};
 	-- 预解析水卡 ID 与回落壳 ID（同陆地卡：循环内只做数组查表）。
