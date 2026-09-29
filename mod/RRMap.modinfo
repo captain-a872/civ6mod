@@ -67,12 +67,17 @@
 		<UpdateDatabase id="RR_TERRAIN_MATRIX_DATA">
 			<File>Data/RR_Terrains_Matrix.xml</File>
 		</UpdateDatabase>
-		<!-- M4 地形视觉借壳：artdef 文件放 ArtDefs/ 目录并在 <Files> 清单列出即被
-		     ArtDefProvider 扫描（对照本机 workshop Sukritact's Oceans 2542898147、
-		     Sailor Cat 1897241626 实证：两者均无 ImportFiles 动作）。
-		     教训（M4 首测 ArtDef.log 无本 Mod 条目的根因）：目录误名 ArtDef/（单数），
-		     且误用 ImportFiles——Provider 扫的是磁盘 ArtDefs 目录而非虚拟文件系统，
-		     ImportFiles 导入的文件不在扫描范围。此处不再声明动作。 -->
+		<!-- M4 地形视觉借壳（M4 二测根因修复）：artdef 文件放 ArtDefs/ 目录并列入
+		     <Files> 只是必要条件；Civ6 的 ArtDefProvider 只注册 .dep 依赖包，
+		     必须由 <UpdateArt> 动作引用 RRMap.dep，.dep 在消费者 ArtDefDependencyPaths
+		     点名 RR_Terrains.artdef 后引擎才加载它（对照原版 DLC dep、workshop
+		     ScoutCat 1897241626 / CB_Vegetation_Variety 2115981252 实证；
+		     M4 首测 "只需 Files 声明" 的结论有误——那些 mod 均有 .dep + UpdateArt）。
+		     不用 ImportFiles：artdef 由 ArtDefProvider 经 .dep 走磁盘路径，
+		     不走虚拟文件系统。 -->
+		<UpdateArt id="RR_TERRAIN_ART">
+			<File>RRMap.dep</File>
+		</UpdateArt>
 	</InGameActions>
 
 	<!-- modinfo 自身引用文本（Properties 段使用）的多语言翻译 -->
@@ -105,8 +110,10 @@
 		<File>Data/RR_Terrain.xml</File>
 		<File>Data/RR_Features.xml</File>
 		<File>Data/RR_Terrains_Matrix.xml</File>
-		<!-- M4：artdef 借壳文件，须在 ArtDefs/ 目录（复数，Provider 扫描约定）且列入清单 -->
+		<!-- M4：artdef 借壳文件，须在 ArtDefs/ 目录且列入清单；
+		     RRMap.dep 为美术依赖声明（UpdateArt 动作引用它加载上面的 artdef） -->
 		<File>ArtDefs/RR_Terrains.artdef</File>
+		<File>RRMap.dep</File>
 		<File>Text/RR_Text.xml</File>
 		<File>README.md</File>
 	</Files>

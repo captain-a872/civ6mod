@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- ============================================================================
+     RRMap 游戏美术依赖声明（GameDependencyData，.dep）。
+     根因修复（M4 二测）：Civ6 的 ArtDefProvider 只注册 .dep 依赖包，
+     ArtDef.log 里的 "Added art file '<name>: <guid>'" 条目对应的就是
+     .dep 的注册（对照本机原版 DLC 与 ScoutCat 1897241626、
+     CB_Vegetation_Variety 2115981252、Sukritact's Oceans 2542898147
+     实证）。光把 .artdef 文件放进 ArtDefs/ 并在 modinfo <Files> 列出
+     并不会被加载——必须由 .dep 在对应消费者的 ArtDefDependencyPaths
+     里点名，且 modinfo 里要有 <UpdateArt> 动作引用本文件。
+     写法要点（照 workshop 实证范例）：
+       1) <ID><id> 必须与 modinfo 的 Mod id 相同；
+       2) RequiredGameArtIDs 声明依赖原版基础美术包 Civ6；
+       3) 消费者块只追加 ArtDefDependencyPaths，LibraryDependencies 留空、
+          LoadsLibraries=false（本 Mod 不携带 BLP 资产包，借壳原版贴图，
+          严禁声明 LibraryDependencies 否则引擎会找不存在的包）；
+       4) 消费者名单照原版 Expansion2.dep 中引用 Terrains.artdef 的消费者
+          抄录（Audio/VFX/Units/Landmarks/WorldView_Translate/Resources/
+          Terrains/StrategicView_Translate/Farms），并集语义，原版不受影响。
+     ============================================================================ -->
+<AssetObjects..GameDependencyData>
+	<ID>
+		<name text="RRMap"/>
+		<id text="1F35D4DA-3F51-4613-89DC-572A3557E88F"/>
+	</ID>
+	<RequiredGameArtIDs>
+		<Element>
+			<name text="Civ6"/>
+			<id text="cb2f71b7-843e-4af3-9ca7-992acda9c195"/>
+		</Element>
+	</RequiredGameArtIDs>
+	<SystemDependencies>
+		<Element>
+			<ConsumerName text="Terrains"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="Resources"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="Audio"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="VFX"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="Units"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="Landmarks"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="WorldView_Translate"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="StrategicView_Translate"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+		<Element>
+			<ConsumerName text="Farms"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+			<LibraryDependencies/>
+			<LoadsLibraries>false</LoadsLibraries>
+		</Element>
+	</SystemDependencies>
+	<ArtDefDependencies>
+		<Element>
+			<ArtDefPath text="RR_Terrains.artdef"/>
+			<ArtDefDependencyPaths>
+				<Element text="RR_Terrains.artdef"/>
+			</ArtDefDependencyPaths>
+		</Element>
+	</ArtDefDependencies>
+</AssetObjects..GameDependencyData>
