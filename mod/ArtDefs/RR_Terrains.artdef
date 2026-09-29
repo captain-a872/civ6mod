@@ -2179,7 +2179,7 @@
 							<m_Fields>
 								<m_Values>
 									<Element class="AssetObjects..StringValue">
-										<m_Value text="Shallows" />
+										<m_Value text="Ocean" />
 										<m_ParamName text="XrefName" />
 									</Element>
 								</m_Values>
@@ -2435,7 +2435,7 @@
 							<m_Fields>
 								<m_Values>
 									<Element class="AssetObjects..StringValue">
-										<m_Value text="Shallows" />
+										<m_Value text="Ocean" />
 										<m_ParamName text="XrefName" />
 									</Element>
 								</m_Values>
