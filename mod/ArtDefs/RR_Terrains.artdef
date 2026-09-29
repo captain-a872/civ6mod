@@ -3,10 +3,14 @@
      RRMap 自定义地形 ArtDef（借壳文件）。
      背景：Civ6 地形视觉由 .artdef 绑定而非数据库；M3 的 14 个矩阵地形卡
      与 TERRAIN_RR_RIVER（M2 大河水面）无 ArtDef 条目，引擎全部回落草原贴图。
+     海洋三级具名化追加 TERRAIN_RR_DEEPSEA（借 OCEAN 壳）与
+     TERRAIN_RR_SHALLOW（借 COAST 壳）两条目，同此纪律。
      本文件从原版 Base/ArtDefs/Terrains.artdef 逐条目克隆，仅改条目名
      （m_Name）为自定义地形 Type，Audio/StrategicView/Clutter/Lighting/
      TerrainType/TerrainSubType 等 Xref 全部保留原版指向（借壳不改视觉资产）。
      m_ReplaceMergedCollectionElements=false 是并集语义：原版条目不受影响。
+     加载约定（M4 修复）：文件须位于 ArtDefs/ 目录（复数）且列入 modinfo
+     <Files>，ArtDefProvider 扫描磁盘目录，勿用 ImportFiles。
      ============================================================================ -->
 <AssetObjects..ArtDefSet>
 	<m_Version>
@@ -2200,6 +2204,262 @@
 					</Element>
 				</m_ChildCollections>
 				<m_Name text="TERRAIN_RR_RIVER" />
+				<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+			</Element>
+			<!-- 借壳映射：TERRAIN_RR_DEEPSEA ← TERRAIN_OCEAN（深海→远洋贴图） -->
+			<Element>
+				<m_Fields>
+					<m_Values />
+				</m_Fields>
+				<m_ChildCollections>
+					<Element>
+						<m_CollectionName text="Audio" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="Ocean" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="Entry" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="StrategicView" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..ArtDefReferenceValue">
+										<m_ElementName text="Ocean" />
+										<m_RootCollectionName text="TerrainTypes" />
+										<m_ArtDefPath text="StrategicView.artdef" />
+										<m_CollectionIsLocked>false</m_CollectionIsLocked>
+										<m_TemplateName text="StrategicView" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="Entry" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<!-- 理由：原版 OCEAN 条目无 Clutter 子集合（远洋无贴花），照壳留空 -->
+					<Element>
+						<m_CollectionName text="Clutter" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+					</Element>
+					<Element>
+						<m_CollectionName text="Lighting" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..RGBValue">
+										<m_r>26.000000</m_r>
+										<m_g>55.000000</m_g>
+										<m_b>82.000000</m_b>
+										<m_ParamName text="BounceColor" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="Lighting001" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="Snow" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+					</Element>
+					<Element>
+						<m_CollectionName text="TerrainType" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="Ocean" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="TerrainType" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="TerrainSubType" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="Grass" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="TerrainSubType" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="WaterType" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+					</Element>
+				</m_ChildCollections>
+				<m_Name text="TERRAIN_RR_DEEPSEA" />
+				<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+			</Element>
+			<!-- 借壳映射：TERRAIN_RR_SHALLOW ← TERRAIN_COAST（浅海→海岸/浅水贴图） -->
+			<Element>
+				<m_Fields>
+					<m_Values />
+				</m_Fields>
+				<m_ChildCollections>
+					<Element>
+						<m_CollectionName text="Audio" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="Coast" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="Entry" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="StrategicView" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..ArtDefReferenceValue">
+										<m_ElementName text="Coast" />
+										<m_RootCollectionName text="TerrainTypes" />
+										<m_ArtDefPath text="StrategicView.artdef" />
+										<m_CollectionIsLocked>false</m_CollectionIsLocked>
+										<m_TemplateName text="StrategicView" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="Entry" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="Clutter" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="CLUTTER_OCEAN" />
+										<m_ParamName text="XrefName" />
+									</Element>
+									<Element class="AssetObjects..ArtDefReferenceValue">
+										<m_ElementName text="" />
+										<m_RootCollectionName text="" />
+										<m_ArtDefPath text="Clutter.artdef" />
+										<m_CollectionIsLocked>true</m_CollectionIsLocked>
+										<m_TemplateName text="" />
+										<m_ParamName text="Xref" />
+									</Element>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="" />
+										<m_ParamName text="SelectionRule" />
+									</Element>
+									<Element class="AssetObjects..IntValue">
+										<m_nValue>0</m_nValue>
+										<m_ParamName text="SelectionPriority" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="Clutter001" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="Lighting" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..RGBValue">
+										<m_r>26.000000</m_r>
+										<m_g>55.000000</m_g>
+										<m_b>82.000000</m_b>
+										<m_ParamName text="BounceColor" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="Lighting001" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="Snow" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+					</Element>
+					<Element>
+						<m_CollectionName text="TerrainType" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="Shallows" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="TerrainType" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="TerrainSubType" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+						<Element>
+							<m_Fields>
+								<m_Values>
+									<Element class="AssetObjects..StringValue">
+										<m_Value text="Grass" />
+										<m_ParamName text="XrefName" />
+									</Element>
+								</m_Values>
+							</m_Fields>
+							<m_ChildCollections />
+							<m_Name text="TerrainSubType" />
+							<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
+						</Element>
+					</Element>
+					<Element>
+						<m_CollectionName text="WaterType" />
+						<m_ReplaceMergedCollectionElements>false</m_ReplaceMergedCollectionElements>
+					</Element>
+				</m_ChildCollections>
+				<m_Name text="TERRAIN_RR_SHALLOW" />
 				<m_AppendMergedParameterCollections>false</m_AppendMergedParameterCollections>
 			</Element>
 		</Element>

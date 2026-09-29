@@ -1705,7 +1705,11 @@ end
 --       是"形态=岗地丘陵"的设计落地，不是数值偷改；
 --   (b) 极地低地（TERRAIN_SNOW/SNOW_HILLS）不建卡，保持原版"雪原"；
 --   (c) terrainTypes 台账（GenerateTerrainTypes 返回值）在本函数后不再刷新，
---       后续 AddCliffs 等只按陆/水大类读它，矩阵改动不跨陆水边界，安全。
+--       后续 AddCliffs 等只按陆/水大类读它，矩阵改动不跨陆水边界，安全；
+--   (d) 海洋三级具名化：深海/浅海形态 → TERRAIN_RR_DEEPSEA/RR_SHALLOW 具名水卡
+--       （壳等价：分别借 TERRAIN_OCEAN/TERRAIN_COAST 壳）；"海岸/水面"形态保持
+--       原版 COAST 不建卡，大河水面 TERRAIN_RR_RIVER 由 RR_ClassifyAndConvertRivers
+--       另行处理，两者互不动。
 -------------------------------------------------------------------------------
 
 function RR_ApplyTerrainMatrix()
@@ -1772,6 +1776,24 @@ function RR_ApplyTerrainMatrix()
 			matrixId[form][zone] = lazyTerrainId(names[1]);
 		end
 	end
+
+	-- 海洋三级具名化（策划案 1.2：深海 ≤-2000m / 浅海 -2000~-200m / 海岸·水面≈0m）。
+	-- 水形态度卡表：形态 → {具名水卡名, 壳地形名}。壳名仅作解析失败回落的对照。
+	-- 理由（回落语义）：具名卡解析失败(-1)时回落写壳地形——深海回落 OCEAN 对该格
+	-- 是恒等写（现状即 OCEAN，零损失）；浅海回落 COAST 会把该格升级为浅水
+	-- （ShallowWater/Appeal 列随壳变化），仅在数据库注册整体失败时发生（届时陆地
+	-- 具名卡同样缺失），属降级可玩性兜底而非常态路径。
+	local waterMatrix = {
+		["深海"] = {"TERRAIN_RR_DEEPSEA", "TERRAIN_OCEAN"},
+		["浅海"] = {"TERRAIN_RR_SHALLOW", "TERRAIN_COAST"},
+	};
+	-- 预解析水卡 ID 与回落壳 ID（同陆地卡：循环内只做数组查表）。
+	local waterMatrixId = {};
+	local waterFallbackId = {};
+	for form, names in pairs(waterMatrix) do
+		waterMatrixId[form] = lazyTerrainId(names[1]);
+		waterFallbackId[form] = lazyTerrainId(names[2]);
+	end
 	-- 山地/主脊：不查地带，按形态直落。主脊通常已被 RR_ApplySnowRidge
 	-- 写成具名卡，此处兜底防御（如该函数因形态表缺失跳过）。
 	local mountainId = lazyTerrainId("TERRAIN_RR_MOUNTAIN");
@@ -1783,6 +1805,8 @@ function RR_ApplyTerrainMatrix()
 	local flatToHills = 0;	-- 隆起/山麓的平地格同步转为 hills 的格数
 	local fallbackCount = 0;	-- 矩阵 ID 解析失败回落壳（格子未动）的格数
 	local skippedSnow = 0;		-- 极地（雪原/雪丘）不建卡保持原版的格数
+	local waterFallback = 0;	-- 水卡 ID 解析失败走壳回落的格数
+	local waterNotWater = 0;	-- 形态表判为水但 plot 已非水的防御计数（不应发生）
 
 	for y = 0, g_iH - 1 do
 		for x = 0, g_iW - 1 do
@@ -1796,6 +1820,26 @@ function RR_ApplyTerrainMatrix()
 					-- mountain，RR_MOUNTAIN 壳行 Mountain="true" 与之相容。
 					TerrainBuilder.SetTerrainType(pPlot, mountainId);
 					counts["山地"] = (counts["山地"] or 0) + 1;
+				end
+			elseif waterMatrix[form] ~= nil then
+				-- 理由（海洋三级具名化）：深海/浅海形态的水格写具名水卡。
+				-- IsWater 防御：形态表生成后本阶段不改 plot 类型，水格恒为水，
+				-- 非水即上游异常，跳过并计数，不写地形防崩。
+				if pPlot:IsWater() then
+					local wid = waterMatrixId[form];
+					local target = wid;
+					if wid < 0 then
+						-- 回落壳（见 waterMatrix 定义处注释：深海恒等、浅海降级）。
+						target = waterFallbackId[form];
+						waterFallback = waterFallback + 1;
+					end
+					if target ~= nil and target >= 0
+						and pPlot:GetTerrainType() ~= target then
+						TerrainBuilder.SetTerrainType(pPlot, target);
+					end
+					counts[form] = (counts[form] or 0) + 1;
+				else
+					waterNotWater = waterNotWater + 1;
 				end
 			elseif form == "主脊" then
 				if pPlot:IsMountain() then
@@ -1839,8 +1883,8 @@ function RR_ApplyTerrainMatrix()
 	AreaBuilder.Recalculate();
 
 	-- 理由（探针）：按固定顺序逐组合打印落地格数，tuner 日志可立即核对
-	-- 12 个形态×地带组合 + 山地/主脊是否全覆盖、回落路径是否被意外触发。
-	local order = {"低地·FOREST", "低地·STEPPE", "低地·DESERT", "低地·TUNDRA",
+	-- 12 个形态×地带组合 + 山地/主脊 + 深海/浅海是否全覆盖、回落路径是否被意外触发。
+	local order = {"深海", "浅海", "低地·FOREST", "低地·STEPPE", "低地·DESERT", "低地·TUNDRA",
 		"隆起·FOREST", "隆起·STEPPE", "隆起·DESERT", "隆起·TUNDRA",
 		"山麓·FOREST", "山麓·STEPPE", "山麓·DESERT", "山麓·TUNDRA",
 		"山地", "主脊"};
@@ -1849,6 +1893,6 @@ function RR_ApplyTerrainMatrix()
 		table.insert(parts, key .. "=" .. tostring(counts[key] or 0));
 	end
 	print("[RRMap M3] 矩阵地形落地: " .. table.concat(parts, " "));
-	print(string.format("[RRMap M3] 矩阵地形例外: 平地转丘陵 %d, 回落原版壳 %d, 极地保持原版 %d",
-		flatToHills, fallbackCount, skippedSnow));
+	print(string.format("[RRMap M3] 矩阵地形例外: 平地转丘陵 %d, 回落原版壳 %d, 极地保持原版 %d, 水卡壳回落 %d, 水形态非水格 %d",
+		flatToHills, fallbackCount, skippedSnow, waterFallback, waterNotWater));
 end

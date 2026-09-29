@@ -147,6 +147,20 @@
 			<Text>雪线主脊</Text>
 		</Row>
 
+		<!-- 海洋三级具名化（深海 ≤-2000m / 浅海 -2000~-200m；海岸·水面保持原版"海岸"） -->
+		<Row Tag="LOC_TERRAIN_RR_DEEPSEA_NAME" Language="en_US">
+			<Text>Deep Sea</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_DEEPSEA_NAME" Language="zh_Hans_CN">
+			<Text>深海</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_SHALLOW_NAME" Language="en_US">
+			<Text>Shallow Sea</Text>
+		</Row>
+		<Row Tag="LOC_TERRAIN_RR_SHALLOW_NAME" Language="zh_Hans_CN">
+			<Text>浅海</Text>
+		</Row>
+
 		<!-- M2.5 Layer3 微地貌特征卡名 -->
 		<Row Tag="LOC_FEATURE_RR_DELTA_NAME" Language="en_US">
 			<Text>River Delta</Text>
