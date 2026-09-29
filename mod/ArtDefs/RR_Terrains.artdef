@@ -11,6 +11,14 @@
      m_ReplaceMergedCollectionElements=false 是并集语义：原版条目不受影响。
      加载约定（M4 修复）：文件须位于 ArtDefs/ 目录（复数）且列入 modinfo
      <Files>，ArtDefProvider 扫描磁盘目录，勿用 ImportFiles。
+     M5 查证（3D 局部棕色排查）：RR_RIVER/RR_SHALLOW/RR_DEEPSEA 三条目与
+     原版 Base COAST/OCEAN 逐字段程序比对完全一致（仅 m_Name 不同）；
+     Expansion1/Expansion2 的 Terrains.artdef 均不覆盖 COAST/OCEAN（E2 仅
+     覆盖 SNOW/DESERT 系的 Lighting），"取 E2 版条目"的前提不成立，条目
+     字段无需也不能再改。棕色只出现在 TerrainType Xref="Shallows" 的地形
+     （Flat/Hill/Mountain/Ocean Xref 的 14 矩阵地形与深海均正常），失效点
+     收敛到引擎浅水 3D 路径（TerrainStyle StandardCoastline 层/海岸线
+     网格，已知对 TERRAIN_COAST 有引擎级特判），非条目字段问题。
      ============================================================================ -->
 <AssetObjects..ArtDefSet>
 	<m_Version>

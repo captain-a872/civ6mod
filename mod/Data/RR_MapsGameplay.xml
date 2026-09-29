@@ -13,7 +13,8 @@
        NumNaturalWonders    : 8  （面积 4 倍，约 1.6 倍密度）
        PlateValue           : 5  （对齐原版 LARGE/HUGE 的板块数）
        Continents           : 8  （AddLakes 大湖数，面积 4 倍）
-       DefaultPlayers       : 8  （与原版标准档一致，前端可调至 20）
+       DefaultPlayers       : 1  （M5 性能减负：默认只有自己；原版语义"该尺寸
+                              建议玩家数"，前端创建界面 AI 数默认值从这儿来）
        Types 行照原版六个尺寸均在 Gameplay Types 表注册 KIND_MAPSIZE 的先例补上，
        防引擎按 Types 枚举尺寸时漏掉自定义档。
 
@@ -28,7 +29,9 @@
 		<Row Type="MAPSIZE_RR_STD10" Kind="KIND_MAPSIZE"/>
 	</Types>
 	<Maps>
-		<Row MapSizeType="MAPSIZE_RR_STD14" Name="LOC_MAPSIZE_RR_STD14_NAME" Description="LOC_MAPSIZE_RR_STD14_DESCRIPTION" DefaultPlayers="8" GridWidth="168" GridHeight="108" NumNaturalWonders="8" PlateValue="5" Continents="8"/>
-		<Row MapSizeType="MAPSIZE_RR_STD10" Name="LOC_MAPSIZE_RR_STD10_NAME" Description="LOC_MAPSIZE_RR_STD10_DESCRIPTION" DefaultPlayers="8" GridWidth="120" GridHeight="78" NumNaturalWonders="6" PlateValue="4" Continents="6"/>
+		<!-- 理由（M5）：DefaultPlayers 与配置库 RR_Config.xml 同步降为 1（默认 solo，
+		     建图/回合计时不再被 8 个 AI 拖累）；网格与自然奇观/板块/大湖参数不动。 -->
+		<Row MapSizeType="MAPSIZE_RR_STD14" Name="LOC_MAPSIZE_RR_STD14_NAME" Description="LOC_MAPSIZE_RR_STD14_DESCRIPTION" DefaultPlayers="1" GridWidth="168" GridHeight="108" NumNaturalWonders="8" PlateValue="5" Continents="8"/>
+		<Row MapSizeType="MAPSIZE_RR_STD10" Name="LOC_MAPSIZE_RR_STD10_NAME" Description="LOC_MAPSIZE_RR_STD10_DESCRIPTION" DefaultPlayers="1" GridWidth="120" GridHeight="78" NumNaturalWonders="6" PlateValue="4" Continents="6"/>
 	</Maps>
 </GameInfo>

@@ -104,10 +104,16 @@
 		</Element>
 	</SystemDependencies>
 	<ArtDefDependencies>
+		<!-- 理由（M5 修正）：原版 Expansion2.dep 中 Terrains.artdef 的依赖是
+		     [StrategicView.artdef, Clutter.artdef]——正是 Terrains 模板 Xref 的
+		     两个 artdef（StrategicView/Clutter 子集合）。本 mod 原先写成自依赖
+		     （RR_Terrains→RR_Terrains），与原版接线不一致，3D 材质解析顺序
+		     无保障；照原版抄齐。 -->
 		<Element>
 			<ArtDefPath text="RR_Terrains.artdef"/>
 			<ArtDefDependencyPaths>
-				<Element text="RR_Terrains.artdef"/>
+				<Element text="StrategicView.artdef"/>
+				<Element text="Clutter.artdef"/>
 			</ArtDefDependencyPaths>
 		</Element>
 	</ArtDefDependencies>
