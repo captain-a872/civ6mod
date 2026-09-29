@@ -40,6 +40,18 @@
 		<Row Tag="LOC_MAPSIZE_RR_STD14_DESCRIPTION" Language="zh_Hans_CN">
 			<Text>地大物博真实地理比例尺。168×108 格（面积为"标准"的 4 倍）——M1 海拔与形态层里程碑的性能冒烟尺寸。</Text>
 		</Row>
+		<Row Tag="LOC_MAPSIZE_RR_STD10_NAME" Language="en_US">
+			<Text>Standard 1:4 · Light (120×78)</Text>
+		</Row>
+		<Row Tag="LOC_MAPSIZE_RR_STD10_NAME" Language="zh_Hans_CN">
+			<Text>标准 1:4 · 轻量（120×78）</Text>
+		</Row>
+		<Row Tag="LOC_MAPSIZE_RR_STD10_DESCRIPTION" Language="en_US">
+			<Text>RRMap real-geography scale, performance tier. 120×78 plots — same per-plot detail density as 168×108, smaller canvas for faster turns.</Text>
+		</Row>
+		<Row Tag="LOC_MAPSIZE_RR_STD10_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>地大物博真实地理比例尺·性能档。120×78 格——每格精细度与 168×108 完全一致，只缩地图幅面，回合更快。</Text>
+		</Row>
 
 		<!-- M2 大河水面地形名（TERRAIN_RR_RIVER 的 Name 指向本键） -->
 		<Row Tag="LOC_TERRAIN_RR_RIVER_NAME" Language="en_US">
