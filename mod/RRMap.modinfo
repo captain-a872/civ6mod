@@ -39,6 +39,7 @@
 	<InGameActions>
 		<ImportFiles id="RR_MAP_SCRIPT">
 			<File>Maps/RR_Continents.lua</File>
+			<File>Maps/RR_Tectonics.lua</File>
 		</ImportFiles>
 		<!-- T4 自定义尺寸（MAPSIZE_RR_STD14）：向游戏库 Maps 表插 GridWidth/GridHeight
 		     尺寸行。不定义 GetMapInitData（M0 首嫌，禁用）时，引擎建网格就读这张表，
