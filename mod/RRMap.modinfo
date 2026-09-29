@@ -112,6 +112,7 @@
 		<File>Data/RR_Config.xml</File>
 		<File>Data/RR_MapsGameplay.xml</File>
 		<File>Maps/RR_Continents.lua</File>
+		<File>Maps/RR_Tectonics.lua</File>
 		<File>Scripts/RR_Debug.lua</File>
 		<File>Data/RR_Terrain.xml</File>
 		<File>Data/RR_Features.xml</File>
