@@ -181,5 +181,20 @@
 			<Text>河漫滩</Text>
 		</Row>
 
+		<!-- M7 开局全图探索参数名/说明（配置库 Parameters 行 Name/Description 指向本组键，
+		     显示在创建游戏 → 高级设置的地图选项组） -->
+		<Row Tag="LOC_MAP_RR_REVEAL_ALL_NAME" Language="en_US">
+			<Text>Reveal All at Start</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_REVEAL_ALL_NAME" Language="zh_Hans_CN">
+			<Text>开局全图探索</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_REVEAL_ALL_DESCRIPTION" Language="en_US">
+			<Text>Debug tool: lift the fog of war on the entire map at game start (unit vision still works), so terrain can be inspected without scouting turn by turn. Side effects: every natural wonder triggers as discovered immediately, and revealing all plots of a large 1:4 map adds rendering load at start. Intended for development inspection only.</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_REVEAL_ALL_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>调试工具：开局即解除全图战争迷雾（单位视野照常），免去逐回合探图目验地形。副作用：全部自然奇观会立即按"已发现"触发；1:4 尺寸全图揭示会加重开局渲染负担。仅供开发目验使用。</Text>
+		</Row>
+
 	</LocalizedText>
 </GameData>

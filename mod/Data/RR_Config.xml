@@ -43,4 +43,23 @@
 	<MapDomainOverrides>
 		<Row Map="RR_Continents.lua" ParameterId="MapSize" Domain="RR_Continents.lua"/>
 	</MapDomainOverrides>
+
+	<!-- M7 开局全图探索开关：照原版 MapSettings.xml 的地图脚本参数范式
+	     （temperature/雨量同一张 Parameters 表），向配置库插一行。
+	     列含义（对照原版生产行逐列核实）：
+	       Key1="Map" Key2="RR_Continents.lua" —— 参数绑定到本地图脚本
+	         （Key2 须与 <Maps> 行的 File 同名，前端只在选中本图时显示该参数）；
+	       ParameterId —— 参数在 Parameters 表内的唯一行键（RR_ 前缀防撞名）；
+	       Domain="bool" —— 内置布尔值域（原版 SetupParameters.xml 先例：
+	         Domain="bool" 渲染为勾选框，无需 DomainValues 行）；
+	       DefaultValue="0" —— 默认关闭；
+	       ConfigurationGroup="Map" ConfigurationId="RR_RevealAll" —— 存进
+	         地图配置的键名，gameplay 侧按此键读取；
+	       GroupId="MapOptions" —— 显示在"创建游戏 → 高级设置"的地图选项组；
+	       Hash="0" —— 与原版行保持一致；
+	       SortIndex="290" —— 原版本图参数占 230~260，取 290 排到其后。
+	     说明：原版行无 ValueDomain 列（值域由 Domain 列表达），故不臆造该列。 -->
+	<Parameters>
+		<Row Key1="Map" Key2="RR_Continents.lua" ParameterId="RRRevealAll" Name="LOC_MAP_RR_REVEAL_ALL_NAME" Description="LOC_MAP_RR_REVEAL_ALL_DESCRIPTION" Domain="bool" DefaultValue="0" ConfigurationGroup="Map" ConfigurationId="RR_RevealAll" GroupId="MapOptions" Hash="0" SortIndex="290"/>
+	</Parameters>
 </GameInfo>
