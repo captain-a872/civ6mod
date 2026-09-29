@@ -67,6 +67,13 @@
 		<UpdateDatabase id="RR_TERRAIN_MATRIX_DATA">
 			<File>Data/RR_Terrains_Matrix.xml</File>
 		</UpdateDatabase>
+		<!-- M4 地形视觉借壳：15 个自定义地形的 ArtDef 条目（14 矩阵地形卡 + 大河水面）。
+		     地形贴图由 .artdef 绑定而非数据库，无条目时引擎回落草原贴图（小地图全绿）；
+		     照 mod 惯例用 ImportFiles 导入虚拟文件系统与原版 Terrains.artdef 并集合并。
+		     独立动作：artdef 加载失败不影响数据库地形注册。 -->
+		<ImportFiles id="RR_TERRAIN_ARTDEF">
+			<File>ArtDef/RR_Terrains.artdef</File>
+		</ImportFiles>
 	</InGameActions>
 
 	<!-- modinfo 自身引用文本（Properties 段使用）的多语言翻译 -->
@@ -99,6 +106,8 @@
 		<File>Data/RR_Terrain.xml</File>
 		<File>Data/RR_Features.xml</File>
 		<File>Data/RR_Terrains_Matrix.xml</File>
+		<!-- M4：artdef 借壳文件，须列入清单才会被加载/导入 -->
+		<File>ArtDef/RR_Terrains.artdef</File>
 		<File>Text/RR_Text.xml</File>
 		<File>README.md</File>
 	</Files>

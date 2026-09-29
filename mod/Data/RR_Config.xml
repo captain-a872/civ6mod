@@ -28,6 +28,11 @@
 	     MAPSIZE_HUGE 的上限（20/24），低于 62 硬上限。 -->
 	<MapSizes>
 		<Row Domain="RR_Continents.lua" MapSizeType="MAPSIZE_RR_STD14" Name="LOC_MAPSIZE_RR_STD14_NAME" Description="LOC_MAPSIZE_RR_STD14_DESCRIPTION" MinPlayers="2" MaxPlayers="20" DefaultPlayers="8" MinCityStates="0" MaxCityStates="24" DefaultCityStates="12" SortIndex="40"/>
+		<!-- M3 性能档（5dc9771 只补了游戏库 Maps 行，漏了配置库这行，导致前端尺寸
+		     下拉框只有 168x108）：120x78 网格比 STD14 小，SortIndex 排在其后（50）。
+		     玩家/城邦上下限与 STD14 同（均沿用 HUGE 上限），DefaultPlayers 对齐
+		     RR_MapsGameplay.xml 行的 DefaultPlayers=8。 -->
+		<Row Domain="RR_Continents.lua" MapSizeType="MAPSIZE_RR_STD10" Name="LOC_MAPSIZE_RR_STD10_NAME" Description="LOC_MAPSIZE_RR_STD10_DESCRIPTION" MinPlayers="2" MaxPlayers="20" DefaultPlayers="8" MinCityStates="0" MaxCityStates="24" DefaultCityStates="12" SortIndex="50"/>
 	</MapSizes>
 
 	<!-- T4 本图尺寸选择器切换：照 EarthMaps.xml 生产范式（ParameterId="MapSize"）。
