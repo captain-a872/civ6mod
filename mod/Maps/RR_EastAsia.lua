@@ -1,23 +1,25 @@
 ------------------------------------------------------------------------------
 -- 文件:    RR_EastAsia.lua
--- 项目:    地大物博·真实地理（RRMap）—— M9 东亚真实学习型地图
+-- 项目:    地大物博·真实地理（RRMap）—— M9 东亚示意学习型地图
 -- 依据:    docs/M9-东亚真实地图-学习笔记.md（本文件生成的学习结论归档处）；
---          数据层 mod/Maps/RR_EastAsiaData.lua（tools/fetch_eastasia_dem.py
---          机器生成，真实 DEM：AWS Open Data Terrain Tiles，陆地 SRTM +
---          海底 ETOPO1 融合，双线性重采样至 0.625°x0.577°）。
--- 职责:    一张"东亚—西太平洋"真实地理静态图（东经 70°~145°、北纬
+--          数据层 mod/Maps/RR_EastAsiaData.lua（【手工编纂】：用户裁定放弃
+--          DEM 真实数据方案，改为"照真实地图手工绘制的示意地图"——
+--          tools/draw_eastasia_map.py 以人工指定的多边形/条带"画"出东亚，
+--          见该工具头注释；方向铁律自检 tools/verify_eastasia_orientation.py
+--          y=0 行=北纬55°=图上方，青藏高原在图中南部、塔里木在其北方）。
+-- 职责:    一张"东亚—西太平洋"示意地理静态图（东经 70°~145°、北纬
 --          10°~55°，MAPSIZE_RR_STD10 = 120x78）。定位：生成器
---          （RR_Tectonics）的 ground truth 教材——真实板块-气候-地形
+--          （RR_Tectonics）的 ground truth 教材——板块-气候-地形
 --          对应关系以数据形式固化，供逐区域比对校准。
 -- 架构:    include "RR_Continents" 复用其全部落地机制（形态分类/雪线主脊/
 --          大河分级/微地貌/矩阵地形/海拔持久化——依赖 M9 把 g_iW/g_iH
 --          提升为全局，见该文件常量区注释），本文件只替换三个数据源：
---            1) 海陆与地块类型 ← 真实 DEM（RR_EastAsia_GeneratePlots）
+--            1) 海陆与地块类型 ← 手工格网（RR_EastAsia_GeneratePlots）
 --            2) 地带地形壳     ← 编纂气候格网（RR_EastAsia_GenerateTerrain）
 --            3) 主要河系       ← 折线点列栅格化（RR_EastAsia_AddMajorRivers）
 --          原版分形管线（InitFractal/GenerateCenterRift/AddLakes 等）不用。
 -- 诚实标注: (a) 本图不使用随机海陆——世界全随机种子只影响原版 AddRivers
---          补充支流与特征/资源/奇观摆放；(b) 真实 DEM 在 0.6° 均质化下，
+--          补充支流与特征/资源/奇观摆放；(b) 手工格网是宏观示意——
 --          地块类型按"海拔 + 局部起伏"双判据派生（高原≠山，见学习笔记），
 --          形态层 8 类名与下游契约不变；(c) 东亚图关闭东西卷轴
 --          （GetMapInitData WrapX=false，InlandSea/Tilted_Axis 官方先例）。
@@ -35,7 +37,7 @@ include "AssignStartingPlots"
 -- 理由（M9）：复用 RR_Continents 的全部落地函数（RR_* 系列与 AddFeatures/
 -- AddFeaturesFromContinents）。include 顺序在本文件自身枚举消费之前。
 include "RR_Continents"
--- 理由（M9）：真实 DEM + 气候格网数据（机器生成，见头注释）。
+-- 理由（M9）：手工编纂示意格网数据（绘制方式见 RR_EastAsiaData.lua 头注释）。
 include "RR_EastAsiaData"
 
 -- RR M9 东亚图常量区
@@ -46,9 +48,9 @@ local RR_EA_DH = RR_EASTASIA_DATA.dlat;			-- 0.5769°/格
 local RR_EA_DATA_W = RR_EASTASIA_DATA.w;		-- 120
 local RR_EA_DATA_H = RR_EASTASIA_DATA.h;		-- 78
 
--- 地块类型派生阈值（真实 DEM → Civ6 三类陆地地块；依据见学习笔记 §1）：
--- 高原/盆地 issue——塔里木 1000m、蒙古高原 1500m 是"高而平"的台地，
--- 不能按 RR 纯海拔门槛（≥700 即山地）整片判不可通行山；必须叠加
+-- 地块类型派生阈值（手工格网 → Civ6 三类陆地地块；判据沿用 DEM 版学习
+-- 结论）：高原/盆地 issue——塔里木 1000m、蒙古高原 1500m 是"高而平"的
+-- 台地，不能按 RR 纯海拔门槛（≥700 即山地）整片判不可通行山；必须叠加
 -- 局部起伏（5x5 邻域 max-min，≈190km 窗）区分"台地"与"山脉"。
 local RR_EA_PLOT_MOUNTAIN_MIN_ELEV = 2800;	-- 极高海拔：无条件山地（青藏、帕米尔）
 local RR_EA_PLOT_HILL_MIN_ELEV = 200;		-- 丘陵下限（山麓带同 RR）
@@ -89,9 +91,9 @@ local RR_EA_RIVERS = {
 		{120.5, 53.8}, {124.0, 52.7}, {128.0, 51.3}, {131.5, 50.2}, {134.5, 48.6},
 		{136.8, 47.2}, {138.8, 48.2}, {140.8, 50.0}, {141.6, 52.5}}},
 	{name = "NAMED_RIVER_RR_MEKONG", pts = {
-		{94.2, 33.2}, {95.5, 31.0}, {97.0, 28.5}, {99.0, 26.5}, {100.5, 24.5},
-		{101.8, 21.5}, {103.2, 19.5}, {104.8, 17.5}, {105.8, 15.0}, {106.0, 12.5},
-		{106.3, 10.3}}},
+		{94.2, 33.2}, {95.8, 31.5}, {97.4, 29.6}, {98.6, 28.0}, {99.6, 26.4},
+		{100.4, 24.5}, {101.8, 21.5}, {103.2, 19.5}, {104.8, 17.5}, {105.8, 15.0},
+		{106.0, 12.5}, {106.3, 10.3}}},
 	{name = "NAMED_RIVER_RR_SALWEEN", pts = {
 		{98.2, 28.5}, {98.4, 25.0}, {98.6, 21.0}, {98.8, 17.5}, {98.0, 14.5},
 		{98.0, 11.5}}},
@@ -114,8 +116,8 @@ local RR_EA_RIVERS = {
 		{96.8, 26.2}, {95.8, 23.5}, {94.8, 21.5}, {95.0, 19.5}, {95.5, 17.5},
 		{94.8, 15.8}}},
 	{name = "NAMED_RIVER_RR_REDRIVER", pts = {
-		{100.3, 23.8}, {101.5, 22.8}, {103.5, 21.8}, {105.0, 20.0}, {105.9, 17.5},
-		{106.1, 15.0}, {106.5, 12.5}, {106.7, 10.4}}},
+		{100.3, 23.8}, {101.5, 22.8}, {103.5, 21.8}, {105.0, 20.4},
+		{106.2, 20.6}, {106.5, 20.2}}},
 	-- 以下支流/次级河：name = nil（不参与专名分配，只补水系密度）。
 	{name = nil, pts = { -- 渭河（黄河最大支流）
 		{106.0, 34.5}, {108.5, 34.5}, {110.2, 34.6}}},
@@ -258,18 +260,18 @@ function GetMapInitData(MapSize)
 end
 
 -------------------------------------------------------------------------------
--- M9 阶段1：真实 DEM → plotTypes + g_RR_elevation（全局契约表，1-based）。
+-- M9 阶段1：手工格网 → plotTypes + g_RR_elevation（全局契约表，1-based）。
 -- 地块类型双判据（学习笔记 §1）：
 --   海拔 ≥2800m            → 山地（青藏高原/帕米尔/喜马拉雅主体）
 --   700~2800m 且局部起伏≥600m → 山地（天山/昆仑/阿尔泰/日本阿尔卑斯底）
 --   700~2800m 且起伏 <600m → 丘陵（塔里木盆地缘、蒙古高原、云贵高原面）
 --   200~700m               → 丘陵（山麓带）
 --   0~200m                 → 平地（平原/盆地底）
---   <0                     → 海洋（真实海深：深海/浅海分界沿用 RR 阈值）
+--   <0                     → 海洋（深海/浅海分界沿用 RR 阈值）
 -- 局部起伏 = 5x5 邻域海拔 max-min（≈190km 窗，与 0.6° 格网匹配）。
 -------------------------------------------------------------------------------
 function RR_EastAsia_GeneratePlots()
-	print("Generating Plot Types (RR EastAsia real DEM)");
+	print("Generating Plot Types (RR EastAsia hand-drawn grid)");
 	local W, H = g_iW, g_iH;
 	local n = W * H;
 	local elevData = RR_EA_DecodeElev();
@@ -350,7 +352,7 @@ function RR_EastAsia_GeneratePlots()
 	end
 	AreaBuilder.Recalculate();
 
-	print(string.format("[RRMap M9] DEM: 陆地 %d 格 (%.1f%%), 山 %d 格, 台地丘陵 %d 格",
+	print(string.format("[RRMap M9] 格网: 陆地 %d 格 (%.1f%%), 山 %d 格, 台地丘陵 %d 格",
 		landCount, 100.0 * landCount / n, mountainCount, plateauHillCount));
 	return plotTypes;
 end
@@ -413,11 +415,11 @@ end
 
 -------------------------------------------------------------------------------
 -- M9 阶段3：形态层（8 类名与下游契约不变；水形态直接复用 RR_ClassifyForm）。
--- 陆形态判据（真实地图修正版，学习笔记 §1/§2）：
+-- 陆形态判据（手工格网沿用学习笔记 §1/§2 判据）：
 --   ≥2800m → 主脊；其余山地地块 → 山地；200~700m → 山麓；
 --   <200m 邻格高差 ≥100m → 隆起（任务2 同款门槛）；否则低地。
 -- 不调用 RR_ApplyFoothills：该函数会把邻山平地强制改丘陵并覆写海拔为
--- 200~270m——真实 DEM 的海拔场是 ground truth，不允许被裙边逻辑破坏；
+-- 200~270m——手工格网的海拔场是 ground truth，不允许被裙边逻辑破坏；
 -- 邻山过渡已由"海拔+起伏"双判据在地块类型层表达。
 -------------------------------------------------------------------------------
 function RR_EastAsia_BuildForms()
@@ -464,7 +466,7 @@ function RR_EastAsia_BuildForms()
 		print(string.format("[RRMap M9] 低地指标: 低地+隆起 %d/%d 陆地格 (%.1f%%)",
 			lowlandForms, landForms, 100.0 * lowlandForms / landForms));
 	else
-		print("[RRMap M9] WARNING: 全图无陆地——DEM 解码异常");
+		print("[RRMap M9] WARNING: 全图无陆地——格网解码异常");
 	end
 end
 
@@ -722,7 +724,7 @@ local function RR_EA_RasterizeRiver(pts)
 			end
 		end
 	end
-	-- 河口延拓：0.6° DEM 的海岸格心量化使河口距真实水面常差 1~3 格，
+	-- 河口延拓：格心量化使河口距水面常差 1~3 格，
 	-- 而 RR 分级的"通海"判据要求河道格邻水——从末格 BFS 到最近邻水格
 	-- 接上（内流河找不到则保持原样，塔里木/阿姆/印度河正是如此）。
 	plots = RR_EA_ExtendToWater(plots);
@@ -739,6 +741,30 @@ local function RR_EA_RasterizeRiver(pts)
 		end
 	end
 	return plots, drawn;
+end
+
+-------------------------------------------------------------------------------
+-- M9 阶段3.7：干旱区小河屏蔽（用户裁定：气候地带跟随手工地形——干旱区
+-- 不画小河）。原版 AddRivers 按伪高程在全图撒支流，会把塔里木/戈壁/柴达木
+-- 刷成水网，与手工荒漠矛盾。原版支流落河后、手工主河系落河前，清掉荒漠
+-- 地带承载的河沿（清除法与 RR_Continents 的 clearRiverEdges 同，pcall
+-- 兜底）；残余在湿润边界上的 1 格断头由 RR 分级的"单格无海口清除"回收。
+-- 主河系折线在本屏蔽之后才栅格化，长江/黄河/湄公河/印度河干流穿干旱区
+-- 的河段不受影响（大河过沙漠正是真实行为，如印度河、黄河河套段）。
+-------------------------------------------------------------------------------
+function RR_EA_MaskDesertRivers()
+	local n = g_iW * g_iH;
+	local cleared = 0;
+	for i = 0, n - 1 do
+		local pPlot = Map.GetPlotByIndex(i);
+		if pPlot:GetTerrainType() == g_TERRAIN_TYPE_DESERT and pPlot:IsRiver() then
+			pcall(function() TerrainBuilder.SetWOfRiver(pPlot, false); end);
+			pcall(function() TerrainBuilder.SetNWOfRiver(pPlot, false); end);
+			pcall(function() TerrainBuilder.SetNEOfRiver(pPlot, false); end);
+			cleared = cleared + 1;
+		end
+	end
+	print(string.format("[RRMap M9] 干旱区小河屏蔽: 清除 %d 格荒漠河沿", cleared));
 end
 
 function RR_EastAsia_AddMajorRivers()
@@ -806,22 +832,22 @@ function RR_EastAsia_AssignRiverNames()
 end
 
 -------------------------------------------------------------------------------
--- GenerateMap（东亚真实图主线；阶段探针 [RRMap M9] 前缀）。
+-- GenerateMap（东亚示意图主线；阶段探针 [RRMap M9] 前缀）。
 -------------------------------------------------------------------------------
 function GenerateMap()
 	print("Generating East Asia Real Map (RR M9)");
 
 	g_iW, g_iH = Map.GetGridSize();
 	-- 理由（M9）：RR_Continents 的地块/形态阈值常量是文件 local，本图的地块
-	-- 派生自真实 DEM（见 RR_EastAsia_GeneratePlots 双判据），不消费那些
+	-- 派生自手工格网（见 RR_EastAsia_GeneratePlots 双判据），不消费那些
 	-- 常量；此处只对齐 sea_level 之类原版配置读取惯例（本图无海平面概念）。
 	local rrStartClock = RR_EA_Clock();
 	local rrStageClock = RR_EA_Probe(string.format("开始 %dx%d size=%s",
 		g_iW, g_iH, tostring(Map.GetMapSize())), rrStartClock);
 
-	-- 阶段1：真实 DEM 海陆 + 地块类型。
+	-- 阶段1：手工格网海陆 + 地块类型。
 	plotTypes = RR_EastAsia_GeneratePlots();
-	rrStageClock = RR_EA_Probe("真实DEM地块", rrStageClock);
+	rrStageClock = RR_EA_Probe("格网地块", rrStageClock);
 
 	-- 阶段2：气候格网地形壳。
 	terrainTypes = RR_EastAsia_GenerateTerrain(plotTypes);
@@ -835,7 +861,7 @@ function GenerateMap()
 	AreaBuilder.Recalculate();
 	rrStageClock = RR_EA_Probe("地形", rrStageClock);
 
-	-- 阶段3：形态层（真实 DEM 修正版判据）。
+	-- 阶段3：形态层（手工格网判据）。
 	RR_EastAsia_BuildForms();
 	RR_ApplySnowRidge();	-- 复用：主脊（≥2800m）换雪线主脊具名卡
 	RR_PersistElevation();	-- 复用：海拔场持久化（河流改水面前的 ground truth 快照）
@@ -843,9 +869,12 @@ function GenerateMap()
 	rrStageClock = RR_EA_Probe("海拔/形态层", rrStageClock);
 
 	-- 阶段4：河系。原版 AddRivers 先跑（它按 山>丘>平>水 的伪高程走水，
-	-- 在真实地形上近似真实支流，补手工折线之外的密度）；再叠加主要河系
-	-- 折线栅格化（保证长江/黄河/湄公河等必现且走线正确）。
+	-- 近似支流，补手工折线之外的密度）；随即做干旱区小河屏蔽（地带跟随
+	-- 手工地形——塔里木/戈壁里不长小河，见 RR_EA_MaskDesertRivers）；
+	-- 再叠加主要河系折线栅格化（保证长江/黄河/湄公河等必现且走线正确；
+	-- 屏蔽在主河系之前，干流穿越干旱区不受影响——正是真实行为）。
 	AddRivers();
+	RR_EA_MaskDesertRivers();
 	RR_EastAsia_AddMajorRivers();
 	rrStageClock = RR_EA_Probe("河流", rrStageClock);
 

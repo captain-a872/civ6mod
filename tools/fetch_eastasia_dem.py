@@ -280,4 +280,12 @@ RR_EASTASIA_DATA = {
 
 
 if __name__ == "__main__":
+    # 【已废弃】用户裁定放弃 DEM 真实数据方案：RR_EastAsiaData.lua 改为
+    # tools/draw_eastasia_map.py 手工编纂。重跑本工具会覆盖手工格网——
+    # 除非显式传 --force-dem，否则拒绝执行。
+    if "--force-dem" not in sys.argv:
+        sys.stderr.write(
+            "[已废弃] DEM 方案已放弃，数据层由 tools/draw_eastasia_map.py "
+            "手工编纂。\n如确需重建 DEM 基线，请显式加 --force-dem。\n")
+        sys.exit(2)
     sys.exit(main())
