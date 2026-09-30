@@ -24,7 +24,16 @@ local RR_TEC_PLATE_COUNT = 9;			-- 板块总数（设计基调：8~10 张）
 local RR_TEC_CONTINENTAL_MAJOR = 1;		-- 泛大陆级板块数（continental）
 local RR_TEC_CONTINENTAL_MED = 2;		-- 中陆块板块数（continental）
 										-- 其余 = 大洋板块（oceanic）
-local RR_TEC_JITTER = 0.35;				-- 海岸线抖动幅度（Voronoi 边界噪声权重）
+-- 海岸线分形破碎参数（第六遍半；根因与判读见该遍注释；近似仿真整定）。
+-- 原则：扰动只作用在海陆过渡带，板块归属与消亡边界骨架均不受扰动。
+local RR_TEC_COAST_BAND = 4;			-- 过渡带初始带宽（到异类地壳的环数）
+local RR_TEC_COAST_BAND_MAX = 8;		-- 带宽上限（回调顶格缺水时逐步加宽到此）
+local RR_TEC_COAST_OCTAVES = 4;		-- 分形噪声倍频数（波长 ~W/4 递减至 ~W/28）
+local RR_TEC_COAST_T_OL = 0.00;		-- 洋侧成陆阈值基准：噪声 > 此值 → 半岛/岛链
+local RR_TEC_COAST_T_LO = 0.10;		-- 陆侧成海阈值基准：噪声 < −此值 → 海湾/溺谷
+										-- （回调只压低洋侧阈值，陆侧恒定——carving
+										-- 不随陆海比回调消失；基准差即净造陆倾向）
+local RR_TEC_COAST_T_SLOPE = 0.18;	-- 阈值随带内距离递增速率：紧贴边界扰动最强，带边缘归零
 local RR_TEC_P_CONVERGENT = 45;			-- 消亡边界 roll 概率（%）
 local RR_TEC_P_DIVERGENT = 30;			-- 生长边界 roll 概率（%）；转换 = 余数
 local RR_TEC_BELT_LLL = 2;				-- 陆陆消亡：山系两侧丘陵裙边环数
@@ -115,9 +124,12 @@ function RR_Tectonics_GeneratePlots(world_age)
 		end
 	end
 
-	-- 第三遍：Voronoi 归属（加权距离 + 抖动，设计文档 §3.2）。
+	-- 第三遍：Voronoi 归属（加权距离，设计文档 §3.2）。
+	-- 根因记录：旧实现在此叠加抖动项 (noise[i]-0.5)*2*jitterAmp，但该项与候选
+	-- 板块 p 无关——对所有候选是相同偏移，不改变 argmin，海岸线因此退化为笔直
+	-- 的 Voronoi 边（用户实机截图确认）。海岸线破碎已移至第六遍半的过渡带
+	-- 分形扰动实现（只改水/陆判定，板块归属保持本遍的原始 Voronoi 结果）。
 	local plateOf = {}; -- 0-based plot index → 板块号 1..N
-	local jitterAmp = RR_TEC_JITTER * (W / 12.0) * (W / 12.0);
 	for y = 0, H - 1 do
 		for x = 0, W - 1 do
 			local i = y * W + x;
@@ -126,8 +138,7 @@ function RR_Tectonics_GeneratePlots(world_age)
 			for p = 1, RR_TEC_PLATE_COUNT do
 				local dx = RR_Tec_ToroidalDx(x - plates[p].x);
 				local dy = y - plates[p].y;
-				local score = dx * dx + dy * dy
-					+ (noise[i] - 0.5) * 2.0 * jitterAmp;
+				local score = dx * dx + dy * dy;
 				if bestScore == nil or score < bestScore then
 					bestScore = score;
 					bestP = p;
@@ -316,6 +327,176 @@ function RR_Tectonics_GeneratePlots(world_age)
 		end
 	end
 
+	-- 第六遍半：海岸线分形破碎（修复"海岸线 = 笔直 Voronoi 边"的根因）。
+	-- 原则（任务裁决）：扰动只作用在海陆过渡带——板块归属 g_RR_plateId 保持
+	-- 第三遍的原始 Voronoi 结果不变，消亡边界的山脉骨架（MOUNTAIN 格）一律不
+	-- 翻转，只改过渡带内的水/陆 plot type 判定：洋侧成半岛/岛链，陆侧成海湾/
+	-- 溺谷。海沟/海岭/裂谷等边界地形格可翻转（岛弧、张裂海岸），其余不动。
+	-- 噪声：RR_TEC_COAST_OCTAVES 个倍频的值噪声（双线性插值），采样自第一遍
+	-- noise 表的错位相索引——不新增随机调用，下游随机流与修复前逐次一致
+	-- （同种子的种子布局/边界 roll/热点位置全部不变），确定性论证同 u(i)。
+	-- 过渡带：到异类地壳（C↔O）的环距 ≤ 带宽；极地缓冲带不入带（纬度气候带
+	-- 前提保持，见 §3.1）。
+	-- 翻转 + 陆海比回调（近似仿真整定，见提交记录）：coastBias 只压低洋侧成陆
+	-- 阈值（陆侧成海阈值不随回调动，保证 carving 始终存在）；每次迭代从快照
+	-- 重放（确定性），实测陆地占比落入 35~42% 即停；回调步长 0.025 阈值/百分点、
+	-- 幅值 ±1.5、迭代 9 次；回调顶格仍缺水则说明该种子陆壳 Voronoi 面积极小、
+	-- 过渡带容量不足——加宽过渡带（上限 RR_TEC_COAST_BAND_MAX）再试；仍不入
+	-- 区间则告警并把调参口写进日志（§8 对照表口径）。
+	local coastBias = 0.0;
+	local peninsulaN = 0;
+	local bayN = 0;
+	local landPct = 0.0;
+	do
+		-- 分形噪声：倍频波长 ~W/4 递减至 ~W/28。权重取 1:0.6:0.4:0.28（偏蓝谱）：
+		-- 细倍频有足够幅度把直边撕出碎湾/半岛岬角（仿真验证：棕噪声权重下
+		-- 盒计数维数近似 D 仍贴 1.0，蓝谱权重升至 1.2~1.6）。
+		local octSizes = {};
+		local octWeights = {1.0, 0.6, 0.4, 0.28};
+		local octNorm = 0;
+		for o = 1, RR_TEC_COAST_OCTAVES do
+			octSizes[o] = math.max(3, math.floor((W / 4) / (2 ^ (o - 1)) + 0.5));
+			octNorm = octNorm + octWeights[o];
+		end
+		local function coastNoise(x, y)
+			local f = 0;
+			for o = 1, RR_TEC_COAST_OCTAVES do
+				local s = octSizes[o];
+				local lw = math.ceil(W / s) + 1; -- +1 列保证插值跨缝回绕
+				local lh = math.ceil(H / s) + 1;
+				local gx = x / s;
+				local gy = y / s;
+				local ix = math.floor(gx);
+				local iy = math.floor(gy);
+				local fx = gx - ix;
+				local fy = gy - iy;
+				local lat = function(ax, ay)
+					-- 理由：格点值取 noise 表错位相（倍频/格点序数错开），
+					-- 与 u(i) 同法，不消耗新的随机调用。
+					return noise[(((ay % lh) * lw + (ax % lw)) * 131
+						+ o * 977) % n];
+				end
+				f = f + octWeights[o]
+					* (lat(ix, iy) * (1 - fx) * (1 - fy)
+					+ lat(ix + 1, iy) * fx * (1 - fy)
+					+ lat(ix, iy + 1) * (1 - fx) * fy
+					+ lat(ix + 1, iy + 1) * fx * fy);
+			end
+			return (f / octNorm - 0.5) * 2.0; -- 归一到 [-1, 1]
+		end
+
+		-- 过渡带距离：多源 BFS，源 = 与异类地壳相邻的海岸格；极地带不入队不扩散。
+		-- 做成函数：陆海比回调顶格缺水时按 RR_TEC_COAST_BAND_MAX 上限加宽带宽。
+		local function tecCoastDist(band)
+			local dist = {};
+			local q = {};
+			local h, t = 1, 0;
+			for y = 0, H - 1 do
+				for x = 0, W - 1 do
+					local i = y * W + x;
+					if not RR_Tec_IsPolar(y, polarBuffer) then
+						local selfC = plates[plateOf[i]].crust == "C";
+						local isCoast = false;
+						RR_Tec_ForEachNeighbor(x, y, function(ax, ay, ai)
+							if not isCoast
+								and (plates[plateOf[ai]].crust == "C") ~= selfC then
+								isCoast = true;
+							end
+						end);
+						if isCoast then
+							dist[i] = 0;
+							t = t + 1;
+							q[t] = i;
+						end
+					end
+				end
+			end
+			while h <= t do
+				local cur = q[h];
+				h = h + 1;
+				if dist[cur] < band then
+					local cx = cur % W;
+					local cy = (cur - cx) / W;
+					RR_Tec_ForEachNeighbor(cx, cy, function(ax, ay, ai)
+						if dist[ai] == nil
+							and not RR_Tec_IsPolar(ay, polarBuffer) then
+							dist[ai] = dist[cur] + 1;
+							t = t + 1;
+							q[t] = ai;
+						end
+					end);
+				end
+			end
+			return dist;
+		end
+
+		-- 翻转 + 陆海比回调（说明见本遍头部注释）。
+		local pt0 = {};
+		local e0 = {};
+		for i = 0, n - 1 do
+			pt0[i] = plotTypes[i];
+			e0[i] = elev[i];
+		end
+		local band = RR_TEC_COAST_BAND;
+		local coastDist = tecCoastDist(band);
+		for iter = 1, 9 do
+			peninsulaN = 0;
+			bayN = 0;
+			landCount = 0;
+			for i = 0, n - 1 do
+				plotTypes[i] = pt0[i];
+				elev[i] = e0[i];
+			end
+			for y = 0, H - 1 do
+				for x = 0, W - 1 do
+					local i = y * W + x;
+					local d = coastDist[i];
+					if d ~= nil and plotTypes[i] ~= g_PLOT_TYPE_MOUNTAIN then
+						local ns = coastNoise(x, y);
+						-- 阈值随带内距离递增：紧贴海岸处扰动最强，带边缘归零，
+						-- 板内腹地与远洋深水不受任何影响。coastBias 只压低洋侧
+						-- 阈值（多造陆），陆侧成海阈值恒定——carving 不随回调消失。
+						local tOL = RR_TEC_COAST_T_OL + d * RR_TEC_COAST_T_SLOPE - coastBias;
+						local tLO = RR_TEC_COAST_T_LO + d * RR_TEC_COAST_T_SLOPE;
+						if plotTypes[i] == g_PLOT_TYPE_OCEAN and ns > tOL then
+							-- 洋侧成陆：半岛头部 / 岛链（紧邻俯冲带者即岛弧）。
+							plotTypes[i] = g_PLOT_TYPE_LAND;
+							elev[i] = 10 + 110 * u(i); -- 滨海低地 10~120m
+							peninsulaN = peninsulaN + 1;
+						elseif plotTypes[i] ~= g_PLOT_TYPE_OCEAN and ns < -tLO then
+							-- 陆侧成海：海湾 / 溺谷（浅海拔，后续陆棚遍自然接浅海圈）。
+							plotTypes[i] = g_PLOT_TYPE_OCEAN;
+							elev[i] = -40 - 160 * u(i); -- -40~-200m
+							bayN = bayN + 1;
+						end
+					end
+				end
+			end
+			for i = 0, n - 1 do
+				if plotTypes[i] ~= g_PLOT_TYPE_OCEAN then
+					landCount = landCount + 1;
+				end
+			end
+			landPct = 100.0 * landCount / n;
+			if landPct >= 35.0 and landPct <= 42.0 then
+				break;
+			end
+			coastBias = coastBias + (38.5 - landPct) * 0.025;
+			if coastBias > 1.5 then coastBias = 1.5; end
+			if coastBias < -1.5 then coastBias = -1.5; end
+			if landPct < 35.0 and coastBias >= 1.45 and band < RR_TEC_COAST_BAND_MAX then
+				band = math.min(band + 2, RR_TEC_COAST_BAND_MAX);
+				coastDist = tecCoastDist(band);
+			end
+		end
+		if landPct < 35.0 or landPct > 42.0 then
+			print(string.format("[RRMap M1-Tec] WARNING: 陆海比回调未入 35~42%% 区间"
+				.. " (%.1f%%, bias=%.2f, 带宽=%d)——陆壳 Voronoi 面积极小的种子"
+				.. " 过渡带容量不足，调 RR_TEC_COAST_T_OL/T_LO 或带宽上限",
+				landPct, coastBias, band));
+		end
+	end
+
 	-- 第七遍：山系裙边——陆陆消亡 2 环 / 海陆消亡 1 环内的板内平地改丘陵
 	-- （设计文档 §5.2；与 RR_ApplyFoothills 的一格裙边叠加不冲突）。
 	local skirtLLL = {};
@@ -485,8 +666,74 @@ function RR_Tectonics_GeneratePlots(world_age)
 		shelfN, riftCount));
 	print(string.format("[RRMap M1-Tec] 热点火山: %d 个 (陆 %d/洋岛 %d, 岛 %d 格)",
 		volcanoLand + volcanoIsland, volcanoLand, volcanoIsland, islandCount));
-	print(string.format("[RRMap M1-Tec] 陆海: 陆地 %d 格 (%.1f%%), 地盾格 %d",
-		landCount, 100.0 * landCount / n, shieldHit));
+	print(string.format("[RRMap M1-Tec] 陆海: 陆地 %d 格 (%.1f%%), 地盾格 %d; 海岸扰动: 半岛/岛链 +%d, 海湾 -%d (bias=%.2f)",
+		landCount, 100.0 * landCount / n, shieldHit, peninsulaN, bayN, coastBias));
+	-- 海岸线分形探针（§8 增补；判读见下行注释与本节头部）。
+	do
+		-- 交界格 = 陆且至少一邻格为水的格；N1/N2 = 交界格 1/2 环膨胀内的格数。
+		local coastSeed = {};
+		local coastN = 0;
+		for y = 0, H - 1 do
+			for x = 0, W - 1 do
+				local i = y * W + x;
+				if plotTypes[i] ~= g_PLOT_TYPE_OCEAN then
+					local touchesWater = false;
+					RR_Tec_ForEachNeighbor(x, y, function(ax, ay, ai)
+						if not touchesWater
+							and plotTypes[ai] == g_PLOT_TYPE_OCEAN then
+							touchesWater = true;
+						end
+					end);
+					if touchesWater then
+						coastSeed[i] = true;
+						coastN = coastN + 1;
+					end
+				end
+			end
+		end
+		local function tecDilateCount(seedSet, rings)
+			local seen = {};
+			local q = {};
+			local h, t = 1, 0;
+			for i in pairs(seedSet) do
+				seen[i] = 0;
+				t = t + 1;
+				q[t] = i;
+			end
+			while h <= t do
+				local cur = q[h];
+				h = h + 1;
+				if seen[cur] < rings then
+					local cx = cur % W;
+					local cy = (cur - cx) / W;
+					RR_Tec_ForEachNeighbor(cx, cy, function(ax, ay, ai)
+						if seen[ai] == nil then
+							seen[ai] = seen[cur] + 1;
+							t = t + 1;
+							q[t] = ai;
+						end
+					end);
+				end
+			end
+			return t; -- 入队总数 = rings 环内格数（含种子）
+		end
+		local n1 = tecDilateCount(coastSeed, 1);
+		local n2 = tecDilateCount(coastSeed, 2);
+		-- 分形维数近似（Minkowski 盒计数的一阶差商）：环带面积 A(r)=N(r)−N(r−1)
+		-- 满足 A ∝ r^(1−D)，取两环之比 D ≈ 1 − ln(A2/A1)/ln2。
+		-- 判读（近似指标，看趋势不看绝对值）：
+		--   笔直 Voronoi 边：环带面积不随环距缩水，A2/A1 ≈ 1.0 → D ≈ 1.0；
+		--   破碎自然海岸：边界更"充空间"，D 升至 ≈1.15~1.40。
+		-- 主指标是交界格占比：巨大三角形直边图 <1.5%，破碎后应显著上升。
+		local a1 = n1 - coastN;
+		local a2 = n2 - n1;
+		local coastDim = 1.0;
+		if a1 > 0 and a2 > 0 then
+			coastDim = 1.0 - math.log(a2 / a1) / math.log(2.0);
+		end
+		print(string.format("[RRMap M1-Tec] 海岸线: 交界格 %d (%.1f%%), 盒计数维数近似 D=%.2f (A2/A1=%.2f)",
+			coastN, 100.0 * coastN / n, coastDim, a2 / a1));
+	end
 	print(string.format("[RRMap M1-Tec] world_age=%s 仅影响地形壳纬度细节（撒山已废，见设计文档 §6.2）",
 		tostring(world_age)));
 	return plotTypes;
