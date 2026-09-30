@@ -27,6 +27,20 @@
 			<Text>M0 开发用地图。在"地大物博"框架内复用原版大陆生成流程（海陆、地形、河流、湖泊、地貌、资源、出生点），保证可加载可开局。真实海拔与 1:4 网格将在后续里程碑加入。</Text>
 		</Row>
 
+		<!-- M9 东亚真实地图名称/描述（70°E~145°E、10°N~55°N 真实地理） -->
+		<Row Tag="LOC_MAP_RR_EASTASIA_NAME" Language="en_US">
+			<Text>Real Geography: East Asia (Learning Map)</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_EASTASIA_NAME" Language="zh_Hans_CN">
+			<Text>地大物博：东亚真实地图（学习型）</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_EASTASIA_DESCRIPTION" Language="en_US">
+			<Text>Static real-geography map of East Asia and the West Pacific (70E-145E, 10N-55N) on the 120x78 grid. Real DEM (SRTM land + ETOPO1 bathymetry) drives coastlines, terrain and climate zones; major river systems (Yangtze, Yellow, Mekong, Amur, Indus, Ganges...) are hand-traced from their real courses. Purpose: ground truth for calibrating the RR_Tectonics generator.</Text>
+		</Row>
+		<Row Tag="LOC_MAP_RR_EASTASIA_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>东亚—西太平洋真实地理静态图（东经 70°~145°、北纬 10°~55°，120x78 网格）。真实 DEM（陆地 SRTM + 海底 ETOPO1）决定海陆、地形与气候地带；长江/黄河/湄公河/黑龙江/印度河/恒河等主要河系按真实走线编纂。用途：作为生成器（板块地壳）校准用的 ground truth 教材。</Text>
+		</Row>
+
 		<!-- T4 自定义 1:4 尺寸名称（配置库 MapSizes 行与游戏内 Maps 行共用的 LOC 键） -->
 		<Row Tag="LOC_MAPSIZE_RR_STD14_NAME" Language="en_US">
 			<Text>Standard 1:4 (168×108)</Text>
@@ -224,6 +238,81 @@
 		</Row>
 		<Row Tag="LOC_NAMED_RIVER_RR_LIHE_NAME" Language="zh_Hans_CN">
 			<Text>澧河</Text>
+		</Row>
+
+		<!-- M9 东亚真实河名 12 条（注册于 Data/RR_Rivers.xml M9 组；
+		     英文用通行西文名，中文用本名） -->
+		<Row Tag="LOC_NAMED_RIVER_RR_YANGTZE_NAME" Language="en_US">
+			<Text>Yangtze River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_YANGTZE_NAME" Language="zh_Hans_CN">
+			<Text>长江</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_YELLOWRIVER_NAME" Language="en_US">
+			<Text>Yellow River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_YELLOWRIVER_NAME" Language="zh_Hans_CN">
+			<Text>黄河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_AMUR_NAME" Language="en_US">
+			<Text>Amur River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_AMUR_NAME" Language="zh_Hans_CN">
+			<Text>黑龙江</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_MEKONG_NAME" Language="en_US">
+			<Text>Mekong River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_MEKONG_NAME" Language="zh_Hans_CN">
+			<Text>湄公河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_SALWEEN_NAME" Language="en_US">
+			<Text>Salween River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_SALWEEN_NAME" Language="zh_Hans_CN">
+			<Text>萨尔温江</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_BRAHMAPUTRA_NAME" Language="en_US">
+			<Text>Brahmaputra River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_BRAHMAPUTRA_NAME" Language="zh_Hans_CN">
+			<Text>布拉马普特拉河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_INDUS_NAME" Language="en_US">
+			<Text>Indus River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_INDUS_NAME" Language="zh_Hans_CN">
+			<Text>印度河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_GANGES_NAME" Language="en_US">
+			<Text>Ganges River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_GANGES_NAME" Language="zh_Hans_CN">
+			<Text>恒河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_PEARL_NAME" Language="en_US">
+			<Text>Pearl River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_PEARL_NAME" Language="zh_Hans_CN">
+			<Text>珠江</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_AMUDARYA_NAME" Language="en_US">
+			<Text>Amu Darya</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_AMUDARYA_NAME" Language="zh_Hans_CN">
+			<Text>阿姆河</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_IRRAWADDY_NAME" Language="en_US">
+			<Text>Irrawaddy River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_IRRAWADDY_NAME" Language="zh_Hans_CN">
+			<Text>伊洛瓦底江</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_REDRIVER_NAME" Language="en_US">
+			<Text>Red River</Text>
+		</Row>
+		<Row Tag="LOC_NAMED_RIVER_RR_REDRIVER_NAME" Language="zh_Hans_CN">
+			<Text>红河</Text>
 		</Row>
 
 		<!-- M2.5 Layer3 微地貌特征卡名 -->

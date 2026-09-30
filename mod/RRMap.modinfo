@@ -40,6 +40,11 @@
 		<ImportFiles id="RR_MAP_SCRIPT">
 			<File>Maps/RR_Continents.lua</File>
 			<File>Maps/RR_Tectonics.lua</File>
+			<!-- M9 东亚真实地图：脚本 + 机器生成数据层。M1-Tec 教训：
+			     脚本必须在 ImportFiles 与下方 Files 同时登记，漏一处即
+			     "创建游戏列表不出现 / 加载时找不到文件"。 -->
+			<File>Maps/RR_EastAsia.lua</File>
+			<File>Maps/RR_EastAsiaData.lua</File>
 		</ImportFiles>
 		<!-- T4 自定义尺寸（MAPSIZE_RR_STD14）：向游戏库 Maps 表插 GridWidth/GridHeight
 		     尺寸行。不定义 GetMapInitData（M0 首嫌，禁用）时，引擎建网格就读这张表，
@@ -114,6 +119,8 @@
 		<File>Data/RR_MapsGameplay.xml</File>
 		<File>Maps/RR_Continents.lua</File>
 		<File>Maps/RR_Tectonics.lua</File>
+		<File>Maps/RR_EastAsia.lua</File>
+		<File>Maps/RR_EastAsiaData.lua</File>
 		<File>Scripts/RR_Debug.lua</File>
 		<File>Data/RR_Terrain.xml</File>
 		<File>Data/RR_Features.xml</File>

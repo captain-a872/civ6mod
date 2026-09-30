@@ -3,3 +3,6 @@
 # Python 缓存
 __pycache__/
 *.pyc
+
+# M9 DEM 瓦片缓存（12MB 二进制，重跑 tools/fetch_eastasia_dem.py 可再下载）
+tools/.dem_cache/

@@ -40,7 +40,13 @@ include "AssignStartingPlots"
 -- RR_Tectonics 消费 g_PLOT_TYPE_* / g_TERRAIN_TYPE_* 等全局枚举。
 include "RR_Tectonics"
 
-local g_iW, g_iH;
+-- 理由（M9 提升为全局）：网格宽高原为文件 local，M9 东亚真实地图
+--（RR_EastAsia.lua）按"复用现有落地机制"的要求 include 本文件后调用
+-- RR_ClassifyAndConvertRivers / RR_ApplyTerrainMatrix 等函数——这些函数的
+-- 网格遍历全部读本 upvalue，外部 include 时无法赋值（永远是 nil 崩溃）。
+-- 提升为全局后行为对本文件零变化（GenerateMap 内同样写法赋值），
+-- RR_EastAsia.lua 在自己的 GenerateMap 里赋值同一全局即可复用全部下游。
+g_iW, g_iH = 0, 0;
 local g_iFlags = {};
 local featureGen = nil;
 local world_age_new = 5;
@@ -81,6 +87,14 @@ local RR_SEA_SHALLOW_MAX_ELEV = -100;	-- 浅海上限（旧值 -200）；>-100 �
 -- 3D 观感复核；不满意先调 RR_Tectonics.lua 参数区（设计文档 §8 对照表）。
 local RR_FORM_MOUNTAIN_MIN_ELEV = 700;	-- 山地门槛（旧值 500）
 local RR_FORM_RIDGE_MIN_ELEV = 2800;	-- 主脊门槛（旧值 3500；雪线观感不变）
+-- RR 任务2（隆起阈值修复，用户实测反馈）：邻格高差门槛 50m→100m。
+-- 依据：M1-Tec 板内平原的海拔噪声振幅约 130m（RR_Tectonics.lua
+-- "地壳平原 20~150m"，即相邻平地格高差普遍可达数十米乃至逾 50m），
+-- 旧门槛 50m 落在纯平原噪声带宽之内——实测平原成片被误判为"隆起"
+-- （岗地丘陵观感泛滥、低地指标虚低）。100m 超出平原噪声的单步典型
+-- 高差，只有真实斜坡/台缘（山麓裙边、河谷坡、台地边）才够格，
+-- 与 RR_FORM_* 海拔门槛同为分类线常量，形态分布探针可复核。
+local RR_FORM_RISE_MIN_DIFF = 100;	-- 隆起邻格高差门槛（旧值 50，内联于 RR_ClassifyForm）
 
 -- RR M2 水文分级：参数与状态。
 -- 理由（取值）：168×108（1:4 精细度）下的初始梯度，策划案 2.3"数值为默认倾向，
@@ -355,7 +369,8 @@ function RR_HasAdjacentLand(x, y)
 end
 
 function RR_MaxNeighborElevDiff(x, y)
-	-- 理由（T2 隆起判定）：策划案 1.2"邻格高差≥50m"。只统计陆地邻格
+	-- 理由（T2 隆起判定）：策划案 1.2"邻格高差≥50m"（任务2 起门槛上提到
+	-- 常量 RR_FORM_RISE_MIN_DIFF=100m，依据见常量区注释）。只统计陆地邻格
 	-- （水侧高差无地形意义）；邻格海拔尚未全表算出时跳过该邻格。
 	local pPlot = Map.GetPlot(x, y);
 	local selfElev = g_RR_elevation[y * g_iW + x + 1];
@@ -398,7 +413,7 @@ function RR_ClassifyForm(elev, isWater, hasAdjacentLand, maxNeighborDiff)
 		return "山地";
 	elseif elev >= 200 then
 		return "山麓";
-	elseif maxNeighborDiff >= 50 then
+	elseif maxNeighborDiff >= RR_FORM_RISE_MIN_DIFF then
 		return "隆起";
 	else
 		return "低地";
