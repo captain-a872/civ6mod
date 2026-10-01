@@ -13,6 +13,18 @@
 ------------------------------------------------------------------------------
 local REVEAL_ALL_KEY = "EASTASIA_RevealAll";	-- 与 Config/EastAsiaS1_MapsConfig.xml 的 ConfigurationId 一致
 
+-- 文件日志（自搭抓取）：io 可用时同步写工作区日志文件，pcall 兜底
+local DEBUG_LOG = "/Users/lyg/Documents/Kimi/Workspaces/文明6/civ6mod/logs/didawubo-debug.log";
+local function DLog(msg)
+	msg = tostring(msg);
+	print(msg);
+	local ok, fh = pcall(io.open, DEBUG_LOG, "a");
+	if ok and fh ~= nil then
+		fh:write(msg .. "\n");
+		fh:close();
+	end
+end
+
 local function IsRevealAllEnabled()
 	local ok, v = pcall(function()
 		return GameConfiguration.GetValue(REVEAL_ALL_KEY);
@@ -30,7 +42,7 @@ end
 
 -- 配置在开局时定型，脚本加载时读一次即可
 local REVEAL_ALL = IsRevealAllEnabled();
-print("[DiDaWuBo] reveal-all param = " .. tostring(REVEAL_ALL));
+DLog("[DiDaWuBo] reveal-all param = " .. tostring(REVEAL_ALL));
 
 local g_RevealDone = false;
 
@@ -42,7 +54,7 @@ local function RevealAllPlots()
 			pVis:RevealAllPlots();
 		end
 	end
-	print("[DiDaWuBo] map revealed (fog lifted, unit sight unchanged)");
+	DLog("[DiDaWuBo] map revealed (fog lifted, unit sight unchanged)");
 end
 
 local function OnTurnBegin(playerID)
@@ -55,3 +67,4 @@ local function OnTurnBegin(playerID)
 end
 
 Events.TurnBegin.Add(OnTurnBegin);
+DLog("[DiDaWuBo] debug script loaded");

@@ -12,6 +12,20 @@ include "MapUtilities"
 include "MountainsCliffs"
 include "AssignStartingPlots"
 
+-- 文件日志（自搭抓取）：Aspyr 端口 print 只去 stdout 不落盘，
+-- io 可用时同步写工作区日志文件，pcall 兜底不影响生成。
+local EASTASIA_LOG = "/Users/lyg/Documents/Kimi/Workspaces/文明6/civ6mod/logs/eastasia-map.log";
+local function MLog(msg)
+	msg = tostring(msg);
+	print(msg);
+	local ok, fh = pcall(io.open, EASTASIA_LOG, "a");
+	if ok and fh ~= nil then
+		fh:write(msg .. "
+");
+		fh:close();
+	end
+end
+
 EASTASIA_W = 120
 EASTASIA_H = 78
 EASTASIA_ROWS = {
@@ -98,11 +112,11 @@ EASTASIA_ROWS = {
 
 ------------------------------------------------------------------------------
 function GenerateMap()
-	print("EastAsiaS1: GenerateMap begin");
+	MLog("EastAsiaS1: GenerateMap begin");
 
 	local iW, iH = Map.GetGridSize();
 	if iW ~= EASTASIA_W or iH ~= EASTASIA_H then
-		print("EastAsiaS1: [WARN] grid " .. iW .. "x" .. iH ..
+		MLog("EastAsiaS1: [WARN] grid " .. iW .. "x" .. iH ..
 		      " != data " .. EASTASIA_W .. "x" .. EASTASIA_H ..
 		      "; overflow plots filled with ocean. Pick map size 'East Asia Test 120x78'.");
 	end
@@ -138,15 +152,17 @@ function GenerateMap()
 			TerrainBuilder.SetTerrainType(Map.GetPlotByIndex(i), terrainTypes[i]);
 		end
 	end
-	print("EastAsiaS1: terrain applied");
+	MLog("EastAsiaS1: terrain applied");
 	AreaBuilder.Recalculate();
 
 	-- 台地海岸海蚀崖（S1 唯一允许的"成形"工序）
 	AddCliffs(plotTypes, terrainTypes);
+	MLog("EastAsiaS1: cliffs done");
 
 	AreaBuilder.Recalculate();
 	TerrainBuilder.AnalyzeChokepoints();
 	TerrainBuilder.StampContinents();
+	MLog("EastAsiaS1: continents stamped");
 
 	-- 出生点：S1 无河无资源，肥力评分天然均匀，阈值放低保证落位
 	local startConfig = MapConfiguration.GetValue("start");
@@ -159,7 +175,8 @@ function GenerateMap()
 		START_CONFIG = startConfig,
 	};
 	local start_plot_database = AssignStartingPlots.Create(args)
+	MLog("EastAsiaS1: start plots done");
 
 	local GoodyGen = AddGoodies(iW, iH);
-	print("EastAsiaS1: GenerateMap done");
+	MLog("EastAsiaS1: GenerateMap done");
 end
