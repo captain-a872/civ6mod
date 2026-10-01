@@ -23,15 +23,11 @@
 		<UpdateText id="DIDAWUBO_TEXT_IG">
 			<File>Text/DiDaWuBo_Text.xml</File>
 		</UpdateText>
-		<ImportFiles id="DIDAWUBO_IMPORT">
-			<File>Maps/EastAsiaS1_Data.lua</File>
-		</ImportFiles>
 	</InGameActions>
 	<Files>
 		<File>Config/EastAsiaS1_MapsConfig.xml</File>
 		<File>Data/EastAsiaS1_MapsGameplay.xml</File>
 		<File>Text/DiDaWuBo_Text.xml</File>
 		<File>Maps/EastAsiaS1.lua</File>
-		<File>Maps/EastAsiaS1_Data.lua</File>
 	</Files>
 </Mod>

@@ -1,14 +1,99 @@
 ------------------------------------------------------------------------------
---	FILE:	 EastAsiaS1.lua
---	PURPOSE: 东亚-西太平洋 S1 实测图（120x78 固定编纂数据）
---	S1 阶段只呈现：海陆二分（深海/浅海）、低地、克拉通台地丘陵。
---	无山脉（S2）、无河流（S4）、无地貌与资源（S5/S2 矿物带）——刻意留白。
+-- FILE: EastAsiaS1.lua
+-- 东亚-西太平洋 S1 实测图（120x78 编纂格网，数据内嵌）
+-- 由 tools/s1_eastasia.py --export 生成，勿手改（改 Python 源）
+-- S1 阶段只呈现：海陆二分（深海/浅海）、低地、克拉通台地丘陵。
+-- 无山脉（S2）、无河流（S4）、无地貌与资源（S5/S2 矿物带）——刻意留白。
+-- 测试便利：开局对全部主要文明 RevealAllPlots（冷战场景官方先例）。
 ------------------------------------------------------------------------------
 include "MapEnums"
 include "MapUtilities"
 include "MountainsCliffs"
 include "AssignStartingPlots"
-include "EastAsiaS1_Data"
+
+EASTASIA_W = 120
+EASTASIA_H = 78
+EASTASIA_ROWS = {
+        "OOOOOOOOOOOggggggggggggggggggggggggggggggggggggOOcgccccOOOOOOOOOOOOcOOOOOOOOgOOOOOOgOOOOOgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOOOOhggggggggggggggggggggggggggggggggggggggcccccccggggOOOOOOOOOOOOOOOOggOOOOOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOOOOhggggggggggggggggggggggggggggggggggggggcccccggggggggOOOOOOOOOOOOOOOggOOOOgggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOOOhhggggggggggggggggggggggggggggggggggggggccccccggggggggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOOOhhggggggggggggggggggggggggggggggggggggggOOcccgggggggggOOOOOOOOOOOOOOOOOOgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOOhhhhgggggggggggggggggggggggggggggggggggggOOOcggggggggggccOOOOOOOOOOOOOOOOgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOOhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggcgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOhhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggccOOOOOOOOOOOOOOOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOOhhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggccOOOOOOOOOOOOOOOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOOhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggggcccOOOOOOOOOOOOOOOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOhhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggggccccOOOOOOOOOOOOOcgggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOOhhhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggccccccOOOOOOOOOOOccOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOhhhhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggcccccccOOOOOOOOOOcgOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOhhhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggccccgcccccOOOOOOccgcgOgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOhhhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggcccgggccgccccgOccccgccOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOhhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggccccggggcccccccgccccccgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOhhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggOcccgggcccccccccccccccccOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "OOOOhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggOOOccgcgccccgcccccccccccOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "hOOOhhhhggggggggggggggggggggggggggggggggggggggggggggggggggOOOOccgcccccccgcccccccgcOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gghhhhgggggggggggggggggggggggggggggggggggggggggggggggggggggOOOgggccccccccccccccccgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccgccccccgcgOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcccccccccggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccccgggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcccccgggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhggggggggOccOOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhggggggOOOggOOOOggOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhggggOOOccOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhggggccccccOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhggOccccccOOOOOgOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhggccccgcccOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhggOcccccgccOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhggccccgccccOOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhggggcgcccccccOOOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhgggggccccccccgccOOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhggggggOcccccccccccOOOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghggggggggggggOccccggcccgccgOOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOccccccccgccOOOOOOOOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOcccccccccgggOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOccccccgcgggOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOcgccccccgggOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOOcgcccgOggOOOOOOOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOOOOOcOOOOOgOOggOOOOOOOOOOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOccgOOOOOOOOOOOOOOOOOOOgOOOOOOOOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghgcccccOOOOOOggggOOOOOOOOOOOgggggOOOOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhcccgccOOOOggggOOOOOOOOOOOOOOgggOOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhcccgcOOOgggggOOOOOOOOOOOOOOOgggOOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhggccgOOgggggOOOOOOOOOOOOOOOOgggOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhggccccOOgggggOOOOOOOOOOOOOOOOgggOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghggcccgOOggggggOOOOOOOOOOOOOOOOOggOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcccccgcOgggggggOOOOOOOOOOOOOOOOOggOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcccgccccccOgggggggOOOOOOOOOOOOOOOOOgggOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccccccggggggggOOOOOOOOOOOOOOOOOggOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccchhOgggggggOOOOOOOOOOOOOOOOOggOOOOOO",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhggggggOOOOOOOOOOOOOOOOOggOOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhggggggggOOOOOOOOOOOOOOOOgggOOOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOOOOOOOOOgggggOOO",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOOOOOOOOOgggggggg",
+        "hhhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOOOOOOOggggggg",
+        "hhhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOOOOOcgggggO",
+        "hhhhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOOOOOccccccgccc",
+        "hhhhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggOOOcccccccccccc",
+        "hhhhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcccccccccccccc",
+        "hhhhhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccccccccccc",
+        "hhhhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcccccccgcccc",
+        "hhhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccgcgcccc",
+        "hhhhhhhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcccccgcccc",
+        "hhhhhhhggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccggccc",
+        "hggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccccggccc",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggccggccc",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhggggggggggggggcccggccc",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhgggggggcgcccc",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhgccgcccc",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhccgcccc",
+        "ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhOccgcccc",
+        "gggggggggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhgggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhOOcchcccc",
+        "ggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhgggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhOOchcccc",
+        "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhgghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhOchcccc",
+        "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhccccc"
+
+}
 
 ------------------------------------------------------------------------------
 function GenerateMap()
@@ -77,3 +162,17 @@ function GenerateMap()
 	local GoodyGen = AddGoodies(iW, iH);
 	print("EastAsiaS1: GenerateMap done");
 end
+
+------------------------------------------------------------------------------
+-- 开局后（GameCore 上下文）：全图揭示，方便测试看图
+function InitializeNewGame()
+	print("EastAsiaS1: NewGameInitialized - reveal all plots");
+	local aPlayers = PlayerManager.GetAliveMajors();
+	for _, pPlayer in ipairs(aPlayers) do
+		local pVis = PlayersVisibility[pPlayer:GetID()];
+		if (pVis ~= nil) then
+			pVis:RevealAllPlots();
+		end
+	end
+end
+LuaEvents.NewGameInitialized.Add(InitializeNewGame);
