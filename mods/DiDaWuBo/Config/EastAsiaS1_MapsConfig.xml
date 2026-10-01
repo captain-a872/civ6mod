@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 前端 Configuration 库：地图列表注册 + 自定义尺寸登记 -->
+<!-- 前端 Configuration 库：地图注册 + 尺寸 + 高级设置参数
+     范式全部对照官方/旧版实证：
+     - MapSizes 行带 Domain="EastAsiaS1.lua"：尺寸绑定本地图（EarthMaps.xml 先例）
+     - MapDomainOverrides：选中本图时尺寸下拉只显示绑定尺寸（旧版 RR_Config.xml 实证）
+     - Parameters 行：高级设置勾选框（原版 MapSettings.xml 的 temperature 同机制；
+       Key2 绑定地图脚本 File 名，只在本图选中时显示） -->
 <GameInfo>
 	<Maps>
 		<Row File="EastAsiaS1.lua" Name="LOC_MAP_EASTASIA_S1_NAME"
@@ -7,9 +12,22 @@
 		     Image="Map_Earth" DisableWorldWrap="1" SortIndex="500"/>
 	</Maps>
 	<MapSizes>
-		<Row MapSizeType="MAPSIZE_EASTASIA_S1" Name="LOC_MAPSIZE_EASTASIA_S1_NAME"
-		     Description="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION"
-		     MinPlayers="2" MaxPlayers="12" DefaultPlayers="6"
-		     MinCityStates="0" MaxCityStates="12" DefaultCityStates="6" SortIndex="100"/>
+		<!-- 测试期减负（旧版 M5 实证）：默认 1 玩家 0 城邦，开局快、回合压力小 -->
+		<Row Domain="EastAsiaS1.lua" MapSizeType="MAPSIZE_EASTASIA_S1"
+		     Name="LOC_MAPSIZE_EASTASIA_S1_NAME" Description="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION"
+		     MinPlayers="1" MaxPlayers="20" DefaultPlayers="1"
+		     MinCityStates="0" MaxCityStates="24" DefaultCityStates="0" SortIndex="100"/>
 	</MapSizes>
+	<MapDomainOverrides>
+		<Row Map="EastAsiaS1.lua" ParameterId="MapSize" Domain="EastAsiaS1.lua"/>
+	</MapDomainOverrides>
+	<Parameters>
+		<!-- 开局全图探索开关，默认开（测试图）。存键 EASTASIA_RevealAll，
+		     gameplay 侧由 Scripts/DiDaWuBo_Debug.lua 只读。 -->
+		<Row Key1="Map" Key2="EastAsiaS1.lua" ParameterId="EastAsiaRevealAll"
+		     Name="LOC_MAP_EASTASIA_REVEAL_ALL_NAME" Description="LOC_MAP_EASTASIA_REVEAL_ALL_DESCRIPTION"
+		     Domain="bool" DefaultValue="1"
+		     ConfigurationGroup="Map" ConfigurationId="EASTASIA_RevealAll"
+		     GroupId="MapOptions" Hash="0" SortIndex="290"/>
+	</Parameters>
 </GameInfo>

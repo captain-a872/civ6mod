@@ -410,7 +410,8 @@ if "--export" in sys.argv:
 -- 由 tools/s1_eastasia.py --export 生成，勿手改（改 Python 源）
 -- S1 阶段只呈现：海陆二分（深海/浅海）、低地、克拉通台地丘陵。
 -- 无山脉（S2）、无河流（S4）、无地貌与资源（S5/S2 矿物带）——刻意留白。
--- 测试便利：开局对全部主要文明 RevealAllPlots（冷战场景官方先例）。
+-- 开局全图探索由 GameplayScript（Scripts/DiDaWuBo_Debug.lua）承担，
+-- 走"高级设置勾选参数"链路（旧版 M7 实证范式），地图脚本内不做。
 ------------------------------------------------------------------------------
 include "MapEnums"
 include "MapUtilities"
@@ -490,20 +491,6 @@ function GenerateMap()
 	local GoodyGen = AddGoodies(iW, iH);
 	print("EastAsiaS1: GenerateMap done");
 end
-
-------------------------------------------------------------------------------
--- 开局后（GameCore 上下文）：全图揭示，方便测试看图
-function InitializeNewGame()
-	print("EastAsiaS1: NewGameInitialized - reveal all plots");
-	local aPlayers = PlayerManager.GetAliveMajors();
-	for _, pPlayer in ipairs(aPlayers) do
-		local pVis = PlayersVisibility[pPlayer:GetID()];
-		if (pVis ~= nil) then
-			pVis:RevealAllPlots();
-		end
-	end
-end
-LuaEvents.NewGameInitialized.Add(InitializeNewGame);
 '''
     rows_lua = ",\n".join('        "%s"' % r for r in rows) + "\n"
     lua_text = LUA_TEMPLATE.replace("__ROWS__", rows_lua)

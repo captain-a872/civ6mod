@@ -25,5 +25,17 @@
 		<Replace Tag="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION" Language="en_US">
 			<Text>120x78 sandbox size for the East Asia S1 map only.</Text>
 		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_REVEAL_ALL_NAME" Language="zh_Hans_CN">
+			<Text>开局全图探索</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_REVEAL_ALL_NAME" Language="en_US">
+			<Text>Reveal All (Debug)</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_REVEAL_ALL_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>测试用：开局解除全部战争迷雾（会立即触发全部自然奇观发现）。默认开。</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_REVEAL_ALL_DESCRIPTION" Language="en_US">
+			<Text>Debug: lift all fog of war at game start (triggers all natural wonder discoveries). On by default.</Text>
+		</Replace>
 	</LocalizedText>
 </GameData>

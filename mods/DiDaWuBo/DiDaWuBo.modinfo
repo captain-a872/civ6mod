@@ -23,11 +23,15 @@
 		<UpdateText id="DIDAWUBO_TEXT_IG">
 			<File>Text/DiDaWuBo_Text.xml</File>
 		</UpdateText>
+		<AddGameplayScripts id="DIDAWUBO_SCRIPTS">
+			<File>Scripts/DiDaWuBo_Debug.lua</File>
+		</AddGameplayScripts>
 	</InGameActions>
 	<Files>
 		<File>Config/EastAsiaS1_MapsConfig.xml</File>
 		<File>Data/EastAsiaS1_MapsGameplay.xml</File>
 		<File>Text/DiDaWuBo_Text.xml</File>
 		<File>Maps/EastAsiaS1.lua</File>
+		<File>Scripts/DiDaWuBo_Debug.lua</File>
 	</Files>
 </Mod>
