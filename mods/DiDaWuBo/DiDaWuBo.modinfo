@@ -7,9 +7,26 @@
 		<CompatibleVersions>2.0</CompatibleVersions>
 		<AffectsSavedGames>0</AffectsSavedGames>
 	</Properties>
-	<Dependencies />
 	<References />
-	<Blocks />
+	<FrontEndActions>
+		<UpdateDatabase id="DIDAWUBO_CONFIG">
+			<File>Config/EastAsiaS1_MapsConfig.xml</File>
+		</UpdateDatabase>
+		<UpdateText id="DIDAWUBO_TEXT_FE">
+			<File>Text/DiDaWuBo_Text.xml</File>
+		</UpdateText>
+	</FrontEndActions>
+	<InGameActions>
+		<UpdateDatabase id="DIDAWUBO_GAMEPLAY">
+			<File>Data/EastAsiaS1_MapsGameplay.xml</File>
+		</UpdateDatabase>
+		<UpdateText id="DIDAWUBO_TEXT_IG">
+			<File>Text/DiDaWuBo_Text.xml</File>
+		</UpdateText>
+		<ImportFiles id="DIDAWUBO_IMPORT">
+			<File>Maps/EastAsiaS1_Data.lua</File>
+		</ImportFiles>
+	</InGameActions>
 	<Files>
 		<File>Config/EastAsiaS1_MapsConfig.xml</File>
 		<File>Data/EastAsiaS1_MapsGameplay.xml</File>
@@ -17,25 +34,4 @@
 		<File>Maps/EastAsiaS1.lua</File>
 		<File>Maps/EastAsiaS1_Data.lua</File>
 	</Files>
-	<Actions>
-		<FrontEndActions>
-			<UpdateDatabase id="DIDAWUBO_CONFIG">
-				<File>Config/EastAsiaS1_MapsConfig.xml</File>
-			</UpdateDatabase>
-			<UpdateText id="DIDAWUBO_TEXT_FE">
-				<File>Text/DiDaWuBo_Text.xml</File>
-			</UpdateText>
-		</FrontEndActions>
-		<InGameActions>
-			<UpdateDatabase id="DIDAWUBO_GAMEPLAY">
-				<File>Data/EastAsiaS1_MapsGameplay.xml</File>
-			</UpdateDatabase>
-			<UpdateText id="DIDAWUBO_TEXT_IG">
-				<File>Text/DiDaWuBo_Text.xml</File>
-			</UpdateText>
-			<ImportFiles id="DIDAWUBO_IMPORT">
-				<File>Maps/EastAsiaS1_Data.lua</File>
-			</ImportFiles>
-		</InGameActions>
-	</Actions>
 </Mod>
