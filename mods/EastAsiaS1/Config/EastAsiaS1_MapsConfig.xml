@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 前端 Configuration 库：地图列表注册 + 自定义尺寸登记 -->
+<GameInfo>
+	<Maps>
+		<Row File="EastAsiaS1.lua" Name="LOC_MAP_EASTASIA_S1_NAME"
+		     Description="LOC_MAP_EASTASIA_S1_DESCRIPTION"
+		     Image="Map_Earth" DisableWorldWrap="1" SortIndex="500"/>
+	</Maps>
+	<MapSizes>
+		<Row MapSizeType="MAPSIZE_EASTASIA_S1" Name="LOC_MAPSIZE_EASTASIA_S1_NAME"
+		     Description="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION"
+		     MinPlayers="2" MaxPlayers="12" DefaultPlayers="6"
+		     MinCityStates="0" MaxCityStates="12" DefaultCityStates="6" SortIndex="100"/>
+	</MapSizes>
+</GameInfo>

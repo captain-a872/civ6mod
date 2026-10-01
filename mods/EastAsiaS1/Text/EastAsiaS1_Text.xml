@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GameData>
+	<LocalizedText>
+		<Replace Tag="LOC_MOD_EASTASIA_S1_NAME" Language="zh_Hans_CN">
+			<Text>东亚-西太平洋 S1 实测图</Text>
+		</Replace>
+		<Replace Tag="LOC_MOD_EASTASIA_S1_NAME" Language="en_US">
+			<Text>East Asia S1 Sandbox</Text>
+		</Replace>
+		<Replace Tag="LOC_MOD_EASTASIA_S1_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>模块1分期计划 S1 阶段实测：手工编纂东亚-西太平洋格网（120x78）。仅板块-海陆与克拉通台地，无山脉/河流/地貌（后续分期生成）。创建游戏时尺寸必须选「东亚测试档 120x78」。</Text>
+		</Replace>
+		<Replace Tag="LOC_MOD_EASTASIA_S1_DESCRIPTION" Language="en_US">
+			<Text>S1 sandbox of the staged map plan: hand-encoded East Asia - West Pacific grid (120x78). Plate-driven land/sea plus craton plateaus only; no mountains/rivers/features yet. Must pair with map size 'East Asia Test 120x78'.</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_S1_NAME" Language="zh_Hans_CN">
+			<Text>东亚S1实测图</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_S1_NAME" Language="en_US">
+			<Text>East Asia S1 Sandbox</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_S1_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>S1 阶段：只有海陆与台地丘陵。青藏、日本等挤压带位置此刻是平地（S2 才造山），东海陆架为浅海。搭配尺寸「东亚测试档 120x78」。</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_EASTASIA_S1_DESCRIPTION" Language="en_US">
+			<Text>S1 stage: land/sea and plateau hills only. Collision zones (Tibet, Japan...) are deliberately flat until S2. Pair with size 'East Asia Test 120x78'.</Text>
+		</Replace>
+		<Replace Tag="LOC_MAPSIZE_EASTASIA_S1_NAME" Language="zh_Hans_CN">
+			<Text>东亚测试档 120x78</Text>
+		</Replace>
+		<Replace Tag="LOC_MAPSIZE_EASTASIA_S1_NAME" Language="en_US">
+			<Text>East Asia Test 120x78</Text>
+		</Replace>
+		<Replace Tag="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>东亚-西太平洋实测专用尺寸：120x78 = 9360 格（标准图 1.68 倍面积）。仅配「东亚S1实测图」使用。</Text>
+		</Replace>
+		<Replace Tag="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION" Language="en_US">
+			<Text>120x78 sandbox size for the East Asia S1 map only.</Text>
+		</Replace>
+	</LocalizedText>
+</GameData>

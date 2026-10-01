@@ -8,6 +8,7 @@ S1 实测：东亚-西太平洋 手工编纂格网（区域与旧版 M9 一致�
   fig2 现实海拔快照（编纂级：海陆、陆架/深海梯度、海沟、高原山系）
   fig3 S1 规则仿真输出（高程等级视图：初始海拔刻意压平，挤压带仅标注）
 """
+import sys
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -367,6 +368,61 @@ def to_level(e):
     return L
 
 levels_s1 = to_level(elev_s1)
+
+# =====================================================================
+# 五点五、--export：导出游戏内测试地图数据（Lua 数据文件）
+# =====================================================================
+if "--export" in sys.argv:
+    # 游戏呈现规则（2026-10-01 二轮裁决）：
+    #   深海(-2)      -> O  TERRAIN_OCEAN
+    #   浅海/陆架(-1,0)-> c  TERRAIN_COAST
+    #   低地(1)       -> g  草原平地
+    #   克拉通台地(2) -> h  草原丘陵
+    #   挤压带基底在 S1 一律压回低地——不造山、不成片丘陵，只做视图标注
+    craton_mask = np.zeros((H, W), bool)
+    for _, poly, _ in CRATONS:
+        craton_mask |= mask_poly(poly) & land
+    squeeze_mask = np.zeros((H, W), bool)
+    for _, poly, _ in SQUEEZE_ZONES:
+        squeeze_mask |= mask_poly(poly) & land
+    elev_game = elev_s1.copy()
+    elev_game[squeeze_mask & ~craton_mask] = 100.0
+    levels_game = to_level(elev_game)
+
+    def lv_char(lv):
+        if lv <= -2:
+            return "O"
+        if lv <= 0:
+            return "c"
+        if lv == 2:
+            return "h"
+        return "g"
+
+    rows = []
+    for cy in range(H):          # civ6 y=0 在南；本格网 y=0 在北 -> 行序翻转
+        ny = H - 1 - cy
+        rows.append("".join(lv_char(lv) for lv in levels_game[ny]))
+
+    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mods", "EastAsiaS1", "Maps")
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "EastAsiaS1_Data.lua")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("-- 由 tools/s1_eastasia.py --export 生成，勿手改\n")
+        f.write("-- 东亚-西太平洋 S1 实测格网 120x78；行序 y=0 为南端（civ6 约定）\n")
+        f.write("-- 编码: O=深海 c=浅海/陆架 g=低地 h=台地丘陵(克拉通)\n")
+        f.write("EASTASIA_ROWS = {\n")
+        for r in rows:
+            f.write('    "%s",\n' % r)
+        f.write("}\n")
+        f.write("EASTASIA_W = %d\nEASTASIA_H = %d\n" % (W, H))
+    cnt = {c: sum(r.count(c) for r in rows) for c in "Ocgh"}
+    total = W * H
+    print("导出:", os.path.abspath(out_path))
+    print("格数统计 O(深海)=%d c(浅海)=%d g(低地)=%d h(台地)=%d" % (cnt["O"], cnt["c"], cnt["g"], cnt["h"]))
+    print("陆地占比: %.1f%%  台地占陆地: %.1f%%" % (
+        (cnt["g"] + cnt["h"]) / total * 100,
+        cnt["h"] / max(1, cnt["g"] + cnt["h"]) * 100))
+    raise SystemExit(0)
 
 # =====================================================================
 # 六、绘图

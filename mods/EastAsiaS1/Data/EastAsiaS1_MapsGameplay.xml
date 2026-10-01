@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gameplay 库：自定义地图尺寸（120x78 东亚测试档） -->
+<GameInfo>
+	<Types>
+		<Row Type="MAPSIZE_EASTASIA_S1" Kind="KIND_MAPSIZE"/>
+	</Types>
+	<Maps>
+		<Row MapSizeType="MAPSIZE_EASTASIA_S1" Name="LOC_MAPSIZE_EASTASIA_S1_NAME"
+		     Description="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION"
+		     DefaultPlayers="6" GridWidth="120" GridHeight="78"
+		     NumNaturalWonders="0" PlateValue="4" Continents="4"/>
+	</Maps>
+</GameInfo>

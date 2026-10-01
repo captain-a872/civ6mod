@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod id="B94F451E-B097-4445-8E1C-90EDF4F4373B" version="1">
+	<Properties>
+		<Name>LOC_MOD_EASTASIA_S1_NAME</Name>
+		<Description>LOC_MOD_EASTASIA_S1_DESCRIPTION</Description>
+		<Authors>Kimi Work</Authors>
+		<AffectsSavedGames>0</AffectsSavedGames>
+	</Properties>
+	<Dependencies />
+	<References />
+	<Blocks />
+	<Files>
+		<File>Config/EastAsiaS1_MapsConfig.xml</File>
+		<File>Data/EastAsiaS1_MapsGameplay.xml</File>
+		<File>Text/EastAsiaS1_Text.xml</File>
+		<File>Maps/EastAsiaS1.lua</File>
+		<File>Maps/EastAsiaS1_Data.lua</File>
+	</Files>
+	<Actions>
+		<FrontEndActions>
+			<UpdateDatabase id="EASTASIA_S1_CONFIG">
+				<File>Config/EastAsiaS1_MapsConfig.xml</File>
+			</UpdateDatabase>
+			<UpdateText id="EASTASIA_S1_TEXT_FE">
+				<File>Text/EastAsiaS1_Text.xml</File>
+			</UpdateText>
+		</FrontEndActions>
+		<InGameActions>
+			<UpdateDatabase id="EASTASIA_S1_GAMEPLAY">
+				<File>Data/EastAsiaS1_MapsGameplay.xml</File>
+			</UpdateDatabase>
+			<UpdateText id="EASTASIA_S1_TEXT_IG">
+				<File>Text/EastAsiaS1_Text.xml</File>
+			</UpdateText>
+			<ImportFiles id="EASTASIA_S1_IMPORT">
+				<File>Maps/EastAsiaS1_Data.lua</File>
+			</ImportFiles>
+		</InGameActions>
+	</Actions>
+</Mod>
