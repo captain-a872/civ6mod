@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <GameData>
 	<LocalizedText>
-		<Replace Tag="LOC_MOD_EASTASIA_S1_NAME" Language="zh_Hans_CN">
-			<Text>东亚-西太平洋 S1 实测图</Text>
+		<Replace Tag="LOC_MOD_DIDAWUBO_NAME" Language="zh_Hans_CN">
+			<Text>地大物博</Text>
 		</Replace>
-		<Replace Tag="LOC_MOD_EASTASIA_S1_NAME" Language="en_US">
-			<Text>East Asia S1 Sandbox</Text>
+		<Replace Tag="LOC_MOD_DIDAWUBO_NAME" Language="en_US">
+			<Text>DiDaWuBo</Text>
 		</Replace>
-		<Replace Tag="LOC_MOD_EASTASIA_S1_DESCRIPTION" Language="zh_Hans_CN">
-			<Text>模块1分期计划 S1 阶段实测：手工编纂东亚-西太平洋格网（120x78）。仅板块-海陆与克拉通台地，无山脉/河流/地貌（后续分期生成）。创建游戏时尺寸必须选「东亚测试档 120x78」。</Text>
+		<Replace Tag="LOC_MOD_DIDAWUBO_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>文明6机制重构 mod · 第一部分「地大物博」：板块-地形-气候-水文-群系全链生成。当前内容：东亚S1实测图（120x78）。</Text>
 		</Replace>
-		<Replace Tag="LOC_MOD_EASTASIA_S1_DESCRIPTION" Language="en_US">
-			<Text>S1 sandbox of the staged map plan: hand-encoded East Asia - West Pacific grid (120x78). Plate-driven land/sea plus craton plateaus only; no mountains/rivers/features yet. Must pair with map size 'East Asia Test 120x78'.</Text>
+		<Replace Tag="LOC_MOD_DIDAWUBO_DESCRIPTION" Language="en_US">
+			<Text>Civ6 mechanics rebuild, part 1 'DiDaWuBo': plate-terrain-climate-hydrology-biome generation chain. Current content: East Asia S1 sandbox map (120x78).</Text>
 		</Replace>
 		<Replace Tag="LOC_MAP_EASTASIA_S1_NAME" Language="zh_Hans_CN">
 			<Text>东亚S1实测图</Text>
