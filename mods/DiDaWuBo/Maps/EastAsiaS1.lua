@@ -18,11 +18,15 @@ local EASTASIA_LOG = "/Users/lyg/Documents/Kimi/Workspaces/文明6/civ6mod/logs/
 local function MLog(msg)
 	msg = tostring(msg);
 	print(msg);
-	local ok, fh = pcall(io.open, EASTASIA_LOG, "a");
-	if ok and fh ~= nil then
-		fh:write(msg .. "
+	-- 注意：io 为 nil 时 pcall(io.open,...) 的参数求值在保护之外会直接抛，
+	-- 必须先判空再 pcall（2026-10-02 报错根因实证）。
+	if io ~= nil and io.open ~= nil then
+		local ok, fh = pcall(io.open, EASTASIA_LOG, "a");
+		if ok and fh ~= nil then
+			fh:write(msg .. "
 ");
-		fh:close();
+			fh:close();
+		end
 	end
 end
 

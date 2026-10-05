@@ -18,10 +18,13 @@ local DEBUG_LOG = "/Users/lyg/Documents/Kimi/Workspaces/文明6/civ6mod/logs/did
 local function DLog(msg)
 	msg = tostring(msg);
 	print(msg);
-	local ok, fh = pcall(io.open, DEBUG_LOG, "a");
-	if ok and fh ~= nil then
-		fh:write(msg .. "\n");
-		fh:close();
+	-- io 判空先于 pcall（参数求值在 pcall 保护之外，2026-10-02 实证）
+	if io ~= nil and io.open ~= nil then
+		local ok, fh = pcall(io.open, DEBUG_LOG, "a");
+		if ok and fh ~= nil then
+			fh:write(msg .. "\n");
+			fh:close();
+		end
 	end
 end
 
