@@ -37,5 +37,17 @@
 		<Replace Tag="LOC_MAP_EASTASIA_REVEAL_ALL_DESCRIPTION" Language="en_US">
 			<Text>Debug: lift all fog of war at game start (triggers all natural wonder discoveries). On by default.</Text>
 		</Replace>
+		<Replace Tag="LOC_MAP_SKELETON_NAME" Language="zh_Hans_CN">
+			<Text>骨架自检图（调试用）</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_SKELETON_NAME" Language="en_US">
+			<Text>Skeleton Self-Check (Debug)</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_SKELETON_DESCRIPTION" Language="zh_Hans_CN">
+			<Text>二分对照试验用：全图平原+边缘海洋的最小生成路径。本图能开局=注册层完好；也报错=问题在环境层。尺寸同样选「东亚测试档 120x78」。</Text>
+		</Replace>
+		<Replace Tag="LOC_MAP_SKELETON_DESCRIPTION" Language="en_US">
+			<Text>Bisection control: minimal generation (flat plains + ocean rim). If this starts, registration is fine; if it errors too, the fault is environmental.</Text>
+		</Replace>
 	</LocalizedText>
 </GameData>

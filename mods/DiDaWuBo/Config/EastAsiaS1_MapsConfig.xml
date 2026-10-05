@@ -10,6 +10,9 @@
 		<Row File="EastAsiaS1.lua" Name="LOC_MAP_EASTASIA_S1_NAME"
 		     Description="LOC_MAP_EASTASIA_S1_DESCRIPTION"
 		     Image="Map_Earth" DisableWorldWrap="1" SortIndex="500"/>
+		<Row File="EastAsiaSkeleton.lua" Name="LOC_MAP_SKELETON_NAME"
+		     Description="LOC_MAP_SKELETON_DESCRIPTION"
+		     Image="Map_Earth" DisableWorldWrap="1" SortIndex="501"/>
 	</Maps>
 	<MapSizes>
 		<!-- 测试期减负（旧版 M5 实证）：默认 1 玩家 0 城邦，开局快、回合压力小 -->
@@ -17,9 +20,14 @@
 		     Name="LOC_MAPSIZE_EASTASIA_S1_NAME" Description="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION"
 		     MinPlayers="1" MaxPlayers="20" DefaultPlayers="1"
 		     MinCityStates="0" MaxCityStates="24" DefaultCityStates="0" SortIndex="100"/>
+		<Row Domain="EastAsiaSkeleton.lua" MapSizeType="MAPSIZE_EASTASIA_S1"
+		     Name="LOC_MAPSIZE_EASTASIA_S1_NAME" Description="LOC_MAPSIZE_EASTASIA_S1_DESCRIPTION"
+		     MinPlayers="1" MaxPlayers="20" DefaultPlayers="1"
+		     MinCityStates="0" MaxCityStates="24" DefaultCityStates="0" SortIndex="100"/>
 	</MapSizes>
 	<MapDomainOverrides>
 		<Row Map="EastAsiaS1.lua" ParameterId="MapSize" Domain="EastAsiaS1.lua"/>
+		<Row Map="EastAsiaSkeleton.lua" ParameterId="MapSize" Domain="EastAsiaSkeleton.lua"/>
 	</MapDomainOverrides>
 	<Parameters>
 		<!-- 开局全图探索开关，默认开（测试图）。存键 EASTASIA_RevealAll，

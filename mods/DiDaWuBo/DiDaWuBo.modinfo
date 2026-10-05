@@ -32,6 +32,7 @@
 		<File>Data/EastAsiaS1_MapsGameplay.xml</File>
 		<File>Text/DiDaWuBo_Text.xml</File>
 		<File>Maps/EastAsiaS1.lua</File>
+		<File>Maps/EastAsiaSkeleton.lua</File>
 		<File>Scripts/DiDaWuBo_Debug.lua</File>
 	</Files>
 </Mod>
